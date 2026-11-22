@@ -300,14 +300,17 @@ bot.hears("فهرست ویژه", async (ctx) => {
   });
 // TEST UNMUTE
 bot.hears("تست آزاد", async (ctx) => {
-await ctx.reply("✅ دستور دریافت شد");
+  await ctx.reply("✅ دستور دریافت شد");
 });
 
 // TEST OWNER
 bot.hears("تست مدیر", async (ctx) => {
-await ctx.reply(
-"شناسه شما: ${ctx.from.id}\nشناسه مدیر: ${OWNER_ID}\nمدیر هستید؟ ${isOwner(ctx)}"
-);
+  const result =
+    "شناسه شما: " + ctx.from.id +
+    "\nشناسه مدیر: " + OWNER_ID +
+    "\nمدیر هستید؟ " + isOwner(ctx);
+
+  await ctx.reply(result);
 });
 
 // UNMUTE
