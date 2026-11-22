@@ -11,8 +11,8 @@ let db = {
   profiles: {},
   setup: {},
   tags: {},
-  pendingTags: {}
-};
+    pendingTags: {},
+  messageCleanup: {}
 async function loadDB() {
   try {
     db = JSON.parse(await fs.readFile(DB_FILE, "utf8"));
@@ -129,7 +129,115 @@ async function applyPolicy(ctx, userId) {
 }
 export function registerCommands(bot) {
 
-  loadDB();
+    loadDB();
+
+  // WELCOME NEW MEMBERS
+  bot.on("message:new_chat_members", async (ctx, next) => {
+    try {
+      const members = ctx.message.new_chat_members;
+
+      for (const member of members) {
+        const name = String(member.first_name || "دوست جدید")
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;");
+
+        const welcome = await ctx.reply(
+          `سلام <a href="tg://user?id=${member.id}">${name}</a> 🌹\n` +
+          `به گروه خوش اومدی.\n\n` +
+          `📜 لطفاً قبل از چت کردن قوانین گروه رو مطالعه کن.`,
+          {
+            parse_mode: "HTML",
+            reply_markup: {
+              inline_keyboard: [[
+                {
+                  text: "📜 مشاهده قوانین گروه",
+                  url: "https://t.me/hddg5555/174"
+                }
+              ]]
+            }
+          }
+        );
+
+        db.messageCleanup[`${ctx.chat.id}_${welcome.message_id}`] = Date.now();
+        await saveDB();
+      }
+    } catch (err) {
+      console.error("WELCOME ERROR:", err);
+    }
+
+    await next();
+  });
+
+  // DELETE LINKS + SAVE MESSAGE TIMES
+  bot.on("message", async (ctx, next) => {
+    try {
+      const msg = ctx.message;
+
+      if (
+        ctx.chat.type !== "group" &&
+        ctx.chat.type !== "supergroup"
+      ) return await next();
+
+      const entities = [
+        ...(msg.entities || []),
+        ...(msg.caption_entities || [])
+      ];
+
+      const hasHiddenLink = entities.some(e =>
+        e.type === "url" || e.type === "text_link"
+      );
+
+      const content = (msg.text || "") + " " + (msg.caption || "");
+
+      const hasLink =
+        /https?:\/\/|www\.|t\.me\/|telegram\.me\/|[\w-]+\.(com|net|org|ir|io|me|co|info|biz|app|dev)(\/|\b)/i.test(content);
+
+      if (hasHiddenLink || hasLink) {
+        await ctx.api.deleteMessage(ctx.chat.id, msg.message_id);
+        return await next();
+      }
+
+      const key = `${ctx.chat.id}_${msg.message_id}`;
+      db.messageCleanup[key] = Date.now();
+
+      await saveDB();
+    } catch (err) {
+      console.error("MESSAGE CLEANUP ERROR:", err);
+    }
+
+    await next();
+  });
+
+  // AUTO DELETE AFTER 24 HOURS
+  setInterval(async () => {
+    try {
+      const now = Date.now();
+      let changed = false;
+
+      for (const [key, sentAt] of Object.entries(db.messageCleanup)) {
+        if (now - Number(sentAt) < 24 * 60 * 60 * 1000) continue;
+
+        const splitAt = key.lastIndexOf("_");
+        const chatId = Number(key.slice(0, splitAt));
+        const messageId = Number(key.slice(splitAt + 1));
+
+        try {
+          await bot.api.deleteMessage(chatId, messageId);
+        } catch (err) {
+          console.log("DELETE MESSAGE:", err.message);
+        }
+
+        delete db.messageCleanup[key];
+        changed = true;
+      }
+
+      if (changed) await saveDB();
+    } catch (err) {
+      console.error("AUTO DELETE ERROR:", err);
+    }
+  }, 60 * 1000);
 
   // START
   bot.command("start", async (ctx) => {
