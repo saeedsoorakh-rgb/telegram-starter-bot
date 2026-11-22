@@ -299,8 +299,7 @@ bot.hears("فهرست ویژه", async (ctx) => {
     await ctx.reply("سکوت ۲۴ ساعته فعال شد.");
   });
 
-  // UNMUTE
-  // UNMUTE
+// UNMUTE
 bot.hears(/^(رفع سکوت|آزاد)$/, async (ctx) => {
   if (!isOwner(ctx)) return;
 
@@ -313,17 +312,6 @@ bot.hears(/^(رفع سکوت|آزاد)$/, async (ctx) => {
   await applyPolicy(ctx, user.id);
   await ctx.reply("🔊 سکوت برداشته شد.");
 });
-    if (!isOwner(ctx)) return;
-
-    const user = target(ctx);
-    if (!user) return ctx.reply("روی پیام شخص ریپلای کن.");
-
-    delete db.muted[`${ctx.chat.id}_${user.id}`];
-    await saveDB();
-
-    await applyPolicy(ctx, user.id);
-    await ctx.reply("🔊 سکوت برداشته شد.");
-  });
 
   // SET PROFILE
   bot.hears("ثبت اصل", async (ctx) => {
