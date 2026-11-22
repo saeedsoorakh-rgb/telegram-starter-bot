@@ -264,7 +264,7 @@ export function registerCommands(bot) {
     const user = target(ctx);
     const key = targetKey(ctx);
 
-    if (!user || !ctx.from || !isVIP(ctx.chat.id, ctx.from.id)) {
+    if (!user || !ctx.from || (!isOwner(ctx) && !isVIP(ctx.chat.id, ctx.from.id))) {
       return ctx.reply("فقط VIP می‌تواند پرونده را ویرایش کند.");
     }
 
@@ -292,7 +292,7 @@ export function registerCommands(bot) {
 
     const key = targetKey(ctx);
 
-    if (!key || !ctx.from || !isVIP(ctx.chat.id, ctx.from.id)) {
+    if (!key || !ctx.from || (!isOwner(ctx) && !isVIP(ctx.chat.id, ctx.from.id))) {
       return ctx.reply("فقط VIP می‌تواند پرونده را حذف کند.");
     }
 
