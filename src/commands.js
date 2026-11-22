@@ -312,41 +312,34 @@ bot.hears("تست مدیر", async (ctx) => {
 
   await ctx.reply(result);
 });
-
 // UNMUTE
-bot.hears(/^(رفع سکوت|آزاد)$/u, async (ctx) => {
-if (!isOwner(ctx)) return;
+bot.hears("رفع سکوت", async (ctx) => {
+  console.log("UNMUTE COMMAND RECEIVED");
 
-const user = target(ctx);
-if (!user) {
-return ctx.reply("روی پیام شخص ریپلای کن.");
-}
-
-const key = "${ctx.chat.id}_${user.id}";
-
-delete db.muted[key];
-await saveDB();
-await applyPolicy(ctx, user.id);
-
-await ctx.reply("🔊 سکوت برداشته شد.");
-});
-// UNMUTE
-bot.hears(/^(رفع سکوت|آزاد)$/u, async (ctx) => {
-  if (!isOwner(ctx)) return;
+  if (!isOwner(ctx)) {
+    return ctx.reply("⛔ شما مدیر اصلی نیستید.");
+  }
 
   const user = target(ctx);
+
   if (!user) {
-    return ctx.reply("روی پیام شخص ریپلای کن.");
+    return ctx.reply("⚠️ روی پیام شخص موردنظر ریپلای کن.");
   }
 
   const key = `${ctx.chat.id}_${user.id}`;
 
   delete db.muted[key];
   await saveDB();
-  await applyPolicy(ctx, user.id);
 
-  await ctx.reply("🔊 سکوت برداشته شد.");
+  try {
+    await applyPolicy(ctx, user.id);
+    await ctx.reply("🔊 سکوت برداشته شد.");
+  } catch (err) {
+    console.error("UNMUTE ERROR:", err);
+    await ctx.reply("❌ خطا در برداشتن سکوت.");
+  }
 });
+
  // SET PROFILE
   bot.hears("ثبت اصل", async (ctx) => {
     if (ctx.chat.type === "private") return;
