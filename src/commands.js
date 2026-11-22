@@ -233,7 +233,7 @@ export function registerCommands(bot) {
   });
 
   // SET PROFILE
-  bot.command("setasl", async (ctx) => {
+  bot.hears("ثبت اصل", async (ctx) => {
     if (ctx.chat.type === "private") return;
 
     const user = target(ctx);
@@ -258,7 +258,7 @@ export function registerCommands(bot) {
   });
 
   // EDIT PROFILE
-  bot.command("editasl", async (ctx) => {
+  bot.hears("ویرایش اصل", async (ctx) => {
     if (ctx.chat.type === "private") return;
 
     const user = target(ctx);
@@ -287,7 +287,7 @@ export function registerCommands(bot) {
   });
 
   // DELETE PROFILE
-  bot.command("deleteasl", async (ctx) => {
+  bot.hears("حذف اصل", async (ctx) => {
     if (ctx.chat.type === "private") return;
 
     const key = targetKey(ctx);
@@ -307,7 +307,7 @@ export function registerCommands(bot) {
   });
 
   // SHOW PROFILE
-  bot.command("asl", async (ctx) => {
+bot.hears("پرونده اصل", async (ctx) => {
     const key = targetKey(ctx);
 
     if (!key) return ctx.reply("روی پیام شخص ریپلای کن.");
