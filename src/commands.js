@@ -6,6 +6,7 @@ const DB_FILE = path.resolve("bot-data.json");
 
 let db = {
   vip: {},
+  vipNames: {},
   muted: {},
   profiles: {},
   setup: {},
@@ -17,6 +18,7 @@ async function loadDB() {
     db = JSON.parse(await fs.readFile(DB_FILE, "utf8"));
 
     db.vip ||= {};
+    db.vipNames ||= {};
     db.muted ||= {};
     db.profiles ||= {};
     db.setup ||= {};
@@ -144,61 +146,131 @@ export function registerCommands(bot) {
   });
 
   // SET VIP
-  bot.command("setvip", async (ctx) => {
-    if (!isOwner(ctx)) return;
+bot.hears(/^ویژه\s+([0-9۰-۹]+)$/, async (ctx) => {
+  if (!isOwner(ctx)) return;
 
-    const user = target(ctx);
-    const days = Number(ctx.match);
+  const user = target(ctx);
+  const days = Number(ctx.match[1].replace(/[۰-۹]/g, d =>
+    "۰۱۲۳۴۵۶۷۸۹".indexOf(d)
+  ));
 
-    if (!user || !Number.isInteger(days) || days < 1) {
-      return ctx.reply("روی پیام شخص ریپلای کن و بنویس:\n/setvip 3");
-    }
+  if (!user || days < 1) {
+    return ctx.reply("روی پیام شخص ریپلای کن و بنویس: ویژه ۷");
+  }
 
-    const key = `${ctx.chat.id}_${user.id}`;
+  const key = `${ctx.chat.id}_${user.id}`;
 
-    db.vip[key] = Date.now() + days * 86400000;
-    await saveDB();
+  db.vip[key] = Date.now() + days * 86400000;
+  await saveDB();
+  await applyPolicy(ctx, user.id);
 
-    await applyPolicy(ctx, user.id);
+  await ctx.reply(`⭐ ${user.first_name} به مدت ${days} روز VIP شد!`);
+});
 
-    await ctx.reply(`⭐ کاربر ${user.first_name} به مدت ${days} روز VIP شد.`);
-  });
+// EXTEND VIP
+bot.hears(/^تمدید\s+([0-9۰-۹]+)$/, async (ctx) => {
+  if (!isOwner(ctx)) return;
 
-  // REMOVE VIP
-  bot.command("removevip", async (ctx) => {
-    if (!isOwner(ctx)) return;
+  const user = target(ctx);
+  const days = Number(ctx.match[1].replace(/[۰-۹]/g, d =>
+    "۰۱۲۳۴۵۶۷۸۹".indexOf(d)
+  ));
 
-    const key = targetKey(ctx);
-    if (!key) return ctx.reply("روی پیام شخص ریپلای کن.");
+  if (!user || days < 1) {
+    return ctx.reply("روی پیام شخص ریپلای کن و بنویس: تمدید ۳");
+  }
 
-    delete db.vip[key];
-    await saveDB();
+  const key = `${ctx.chat.id}_${user.id}`;
+  const current = Math.max(db.vip[key] || 0, Date.now());
 
-    await applyPolicy(ctx, target(ctx).id);
+  if (!db.vip[key]) {
+    return ctx.reply("این شخص VIP نیست.");
+  }
 
-    await ctx.reply("VIP این کاربر حذف شد.");
-  });
+  db.vip[key] = current + days * 86400000;
+  await saveDB();
 
-  // VIP LIST
-  bot.command("viplist", async (ctx) => {
-    if (!isOwner(ctx)) return;
+  await ctx.reply(`✅ ${days} روز به اعتبار VIP اضافه شد.`);
+});
 
-    const prefix = `${ctx.chat.id}_`;
+// REMOVE VIP
+bot.hears("حذف ویژه", async (ctx) => {
+  if (!isOwner(ctx)) return;
 
-    const list = Object.entries(db.vip)
-      .filter(([key, expiry]) =>
-        key.startsWith(prefix) && expiry > Date.now()
-      )
-      .map(([key, expiry]) => {
-        const id = key.split("_")[1];
-        return `ID: ${id} | ${Math.ceil((expiry - Date.now()) / 86400000)} روز`;
-      });
+  const key = targetKey(ctx);
+  const user = target(ctx);
 
-    await ctx.reply(list.length ? list.join("\n") : "لیست VIP خالی است.");
-  });
+  if (!key) return ctx.reply("روی پیام شخص ریپلای کن.");
+
+  delete db.vip[key];
+  delete db.vipNames[key];
+
+  await saveDB();
+  await applyPolicy(ctx, user.id);
+
+  await ctx.reply("VIP این شخص حذف شد.");
+});
+
+// VIP NAME
+bot.hears(/^لقب\s+(.+)$/, async (ctx) => {
+  if (!isOwner(ctx)) return;
+
+  const user = target(ctx);
+  const key = targetKey(ctx);
+  const name = ctx.match[1].trim();
+
+  if (!user || !key) {
+    return ctx.reply("روی پیام عضو VIP ریپلای کن.");
+  }
+
+  if (!isVIP(ctx.chat.id, user.id)) {
+    return ctx.reply("این شخص VIP نیست.");
+  }
+
+  db.vipNames[key] = name;
+  await saveDB();
+
+  await ctx.reply(`🏅 لقب ${user.first_name} شد: ${name}`);
+});
+
+// REMOVE VIP NAME
+bot.hears("حذف لقب", async (ctx) => {
+  if (!isOwner(ctx)) return;
+
+  const key = targetKey(ctx);
+  if (!key) return ctx.reply("روی پیام شخص ریپلای کن.");
+
+  delete db.vipNames[key];
+  await saveDB();
+
+  await ctx.reply("لقب VIP حذف شد.");
+});
+
+// VIP LIST
+bot.hears("فهرست ویژه", async (ctx) => {
+  if (!isOwner(ctx)) return;
+
+  const prefix = `${ctx.chat.id}_`;
+
+  const list = Object.entries(db.vip)
+    .filter(([key, expiry]) =>
+      key.startsWith(prefix) && expiry > Date.now()
+    )
+    .map(([key, expiry]) => {
+      const id = key.split("_")[1];
+      const name = db.vipNames[key] || "بدون لقب";
+      const days = Math.ceil((expiry - Date.now()) / 86400000);
+
+      return `⭐ ${name}\nشناسه: ${id}\nاعتبار: ${days} روز`;
+    });
+
+  await ctx.reply(
+    list.length ? list.join("\n\n") : "فهرست ویژه خالی است."
+  );
+});
 
   // MUTE
-  bot.command("mute", async (ctx) => {
+  bot.hears("سکوت", async (ctx) => {
     if (!isOwner(ctx)) return;
 
     const user = target(ctx);
@@ -212,7 +284,7 @@ export function registerCommands(bot) {
   });
 
   // MUTE 24 HOURS
-  bot.command("mute24", async (ctx) => {
+  bot.hears("سکوت ۲۴", async (ctx) => {
     if (!isOwner(ctx)) return;
 
     const user = target(ctx);
@@ -228,7 +300,7 @@ export function registerCommands(bot) {
   });
 
   // UNMUTE
-  bot.command("unmute", async (ctx) => {
+  bot.hears("رفع سکوت", async (ctx) => {
     if (!isOwner(ctx)) return;
 
     const user = target(ctx);
