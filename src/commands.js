@@ -1,7 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 
-const OWNER_ID = 8752447301;
+const OWNER_ID = Number(process.env.OWNER_ID || 8752447301);
 const DB_FILE = path.resolve("bot-data.json");
 
 let db = {
