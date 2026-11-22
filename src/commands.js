@@ -8,12 +8,21 @@ let db = {
   vip: {},
   muted: {},
   profiles: {},
-  setup: {}
+  setup: {},
+  tags: {},
+  pendingTags: {}
 };
-
 async function loadDB() {
   try {
     db = JSON.parse(await fs.readFile(DB_FILE, "utf8"));
+
+    db.vip ||= {};
+    db.muted ||= {};
+    db.profiles ||= {};
+    db.setup ||= {};
+    db.tags ||= {};
+    db.pendingTags ||= {};
+
   } catch {
     await saveDB();
   }
@@ -306,18 +315,78 @@ export function registerCommands(bot) {
     await ctx.reply("پرونده حذف شد.");
   });
 
-  // SHOW PROFILE
-bot.hears("پرونده اصل", async (ctx) => {
-    const key = targetKey(ctx);
+  
+// SHOW PROFILE
+bot.hears("اصل", async (ctx) => {
+  const key = targetKey(ctx);
 
-    if (!key) return ctx.reply("روی پیام شخص ریپلای کن.");
+  if (!key) return ctx.reply("روی پیام شخص ریپلای کن.");
 
-    const profile = db.profiles[key];
+  const profile = db.profiles[key];
 
-    if (!profile) return ctx.reply("پرونده‌ای ثبت نشده.");
+  if (!profile) return ctx.reply("پرونده‌ای ثبت نشده.");
 
-    await ctx.reply("📋 پرونده عضو:\n\n" + profile.text);
-  });
+  const tags = db.tags?.[key] || [];
+
+  let result = "📋 پرونده عضو:\n\n" + profile.text;
+
+  if (tags.length > 0) {
+    result += "\n\n🏷 برچسب‌های تأییدشده:\n";
+    result += tags.map(tag => "⭐ " + tag).join("\n");
+  }
+
+  await ctx.reply(result);
+});
+// ADD TAG
+bot.hears(/^برچسب\s+(.+)$/s, async (ctx) => {
+  if (ctx.chat.type === "private") return;
+
+  const user = target(ctx);
+  const key = targetKey(ctx);
+  const tag = ctx.match[1].trim();
+
+  if (!user || !key) {
+    return ctx.reply("برای ثبت برچسب باید روی پیام شخص ریپلای کنی.");
+  }
+
+  const msg = await ctx.reply(
+    `🏷 برچسب پیشنهادی برای ${user.first_name}:\n⭐ ${tag}\n\nبرای تأیید، خود شخص روی همین پیام ریپلای کند و بنویسد: اعتماد`
+  );
+
+  db.pendingTags[`${ctx.chat.id}_${msg.message_id}`] = {
+    targetId: user.id,
+    tag
+  };
+
+  await saveDB();
+});
+
+// APPROVE TAG
+bot.hears("اعتماد", async (ctx) => {
+  const reply = ctx.message.reply_to_message;
+  if (!reply || !ctx.from) return;
+
+  const key = `${ctx.chat.id}_${reply.message_id}`;
+  const pending = db.pendingTags[key];
+
+  if (!pending) return;
+
+  if (pending.targetId !== ctx.from.id) {
+    return ctx.reply("فقط شخصی که برچسب برای او ثبت شده می‌تواند تأیید کند.");
+  }
+
+  const profileKey = `${ctx.chat.id}_${ctx.from.id}`;
+
+  if (!db.tags[profileKey]) db.tags[profileKey] = [];
+
+  db.tags[profileKey].push(pending.tag);
+  delete db.pendingTags[key];
+
+  await saveDB();
+  await ctx.reply("✅ برچسب تأیید و در اصل ثبت شد.");
+});
+
+
 
   // SETUP
   bot.command("setup", async (ctx) => {
