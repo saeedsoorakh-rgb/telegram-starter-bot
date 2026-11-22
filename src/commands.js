@@ -314,10 +314,8 @@ bot.hears("تست مدیر", async (ctx) => {
 });
 // UNMUTE
 bot.hears("رفع سکوت", async (ctx) => {
-  console.log("UNMUTE COMMAND RECEIVED");
-
   if (!isOwner(ctx)) {
-    return ctx.reply("⛔ شما مدیر اصلی نیستید.");
+    return ctx.reply("⛔ فقط مدیر اصلی اجازه دارد.");
   }
 
   const user = target(ctx);
@@ -333,10 +331,16 @@ bot.hears("رفع سکوت", async (ctx) => {
 
   try {
     await applyPolicy(ctx, user.id);
+
     await ctx.reply("🔊 سکوت برداشته شد.");
+
   } catch (err) {
     console.error("UNMUTE ERROR:", err);
-    await ctx.reply("❌ خطا در برداشتن سکوت.");
+
+    await ctx.reply(
+      "❌ خطا در رفع سکوت:\n" +
+      String(err.description || err.message || err)
+    );
   }
 });
 
