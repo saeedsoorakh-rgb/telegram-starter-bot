@@ -300,7 +300,32 @@ bot.hears("فهرست ویژه", async (ctx) => {
   });
 // TEST UNMUTE
 bot.hears("تست آزاد", async (ctx) => {
-  await ctx.reply("✅ دستور دریافت شد");
+await ctx.reply("✅ دستور دریافت شد");
+});
+
+// TEST OWNER
+bot.hears("تست مدیر", async (ctx) => {
+await ctx.reply(
+"شناسه شما: ${ctx.from.id}\nشناسه مدیر: ${OWNER_ID}\nمدیر هستید؟ ${isOwner(ctx)}"
+);
+});
+
+// UNMUTE
+bot.hears(/^(رفع سکوت|آزاد)$/u, async (ctx) => {
+if (!isOwner(ctx)) return;
+
+const user = target(ctx);
+if (!user) {
+return ctx.reply("روی پیام شخص ریپلای کن.");
+}
+
+const key = "${ctx.chat.id}_${user.id}";
+
+delete db.muted[key];
+await saveDB();
+await applyPolicy(ctx, user.id);
+
+await ctx.reply("🔊 سکوت برداشته شد.");
 });
 // UNMUTE
 bot.hears(/^(رفع سکوت|آزاد)$/u, async (ctx) => {
