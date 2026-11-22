@@ -300,7 +300,7 @@ bot.hears("فهرست ویژه", async (ctx) => {
   });
 
 // UNMUTE
-bot.hears(/^(رفع سکوت|آزاد)$/, async (ctx) => {
+bot.hears(/^(رفع\s*سکوت|آزاد)$/i, async (ctx) => {
   if (!isOwner(ctx)) return;
 
   const user = target(ctx);
