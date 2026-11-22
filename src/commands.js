@@ -304,22 +304,22 @@ bot.hears("تست آزاد", async (ctx) => {
 });
 // UNMUTE
 bot.hears(/^(رفع سکوت|آزاد)$/u, async (ctx) => {
-if (!isOwner(ctx)) return;
+  if (!isOwner(ctx)) return;
 
-const user = target(ctx);
-if (!user) {
-return ctx.reply("روی پیام شخص ریپلای کن.");
-}
+  const user = target(ctx);
+  if (!user) {
+    return ctx.reply("روی پیام شخص ریپلای کن.");
+  }
 
-const key = "${ctx.chat.id}_${user.id}";
+  const key = `${ctx.chat.id}_${user.id}`;
 
-delete db.muted[key];
-await saveDB();
-await applyPolicy(ctx, user.id);
+  delete db.muted[key];
+  await saveDB();
+  await applyPolicy(ctx, user.id);
 
-await ctx.reply("🔊 سکوت برداشته شد.");
+  await ctx.reply("🔊 سکوت برداشته شد.");
 });
-  // SET PROFILE
+ // SET PROFILE
   bot.hears("ثبت اصل", async (ctx) => {
     if (ctx.chat.type === "private") return;
 
