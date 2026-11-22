@@ -302,24 +302,23 @@ bot.hears("فهرست ویژه", async (ctx) => {
 bot.hears("تست آزاد", async (ctx) => {
   await ctx.reply("✅ دستور دریافت شد");
 });
-
 // UNMUTE
-bot.hears(/^(رفع\s*سکوت|آزاد)$/i, async (ctx) => {
-  if (!isOwner(ctx)) return;
+bot.hears(/^(رفع سکوت|آزاد)$/u, async (ctx) => {
+if (!isOwner(ctx)) return;
 
-  const user = target(ctx);
-  if (!user) {
-    return ctx.reply("روی پیام شخص ریپلای کن.");
-  }
+const user = target(ctx);
+if (!user) {
+return ctx.reply("روی پیام شخص ریپلای کن.");
+}
 
-  delete db.muted[`${ctx.chat.id}_${user.id}`];
-  await saveDB();
+const key = "${ctx.chat.id}_${user.id}";
 
-  await applyPolicy(ctx, user.id);
+delete db.muted[key];
+await saveDB();
+await applyPolicy(ctx, user.id);
 
-  await ctx.reply("🔊 سکوت برداشته شد.");
+await ctx.reply("🔊 سکوت برداشته شد.");
 });
-
   // SET PROFILE
   bot.hears("ثبت اصل", async (ctx) => {
     if (ctx.chat.type === "private") return;
