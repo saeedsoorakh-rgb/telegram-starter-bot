@@ -11,8 +11,10 @@ let db = {
   profiles: {},
   setup: {},
   tags: {},
-    pendingTags: {},
+  pendingTags: {},
   messageCleanup: {}
+};
+
 async function loadDB() {
   try {
     db = JSON.parse(await fs.readFile(DB_FILE, "utf8"));
@@ -24,11 +26,13 @@ async function loadDB() {
     db.setup ||= {};
     db.tags ||= {};
     db.pendingTags ||= {};
+    db.messageCleanup ||= {};
 
   } catch {
     await saveDB();
   }
 }
+
 
 async function saveDB() {
   await fs.writeFile(DB_FILE, JSON.stringify(db, null, 2));
