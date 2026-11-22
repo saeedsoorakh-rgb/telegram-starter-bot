@@ -239,7 +239,7 @@ export function registerCommands(bot) {
     const user = target(ctx);
     const key = targetKey(ctx);
 
-    if (!user || !ctx.from || !isVIP(ctx.chat.id, ctx.from.id)) {
+    if (!user || !ctx.from || (!isOwner(ctx) && !isVIP(ctx.chat.id, ctx.from.id))) {
       return ctx.reply("فقط اعضای VIP می‌توانند پرونده ثبت کنند. باید روی پیام مشخصات شخص ریپلای کنی.");
     }
 
