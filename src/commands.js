@@ -79,6 +79,7 @@ const mutePermissions = {
   can_add_web_page_previews: false
 };
 
+
 async function applyPolicy(ctx, userId) {
   const key = `${ctx.chat.id}_${userId}`;
 
@@ -102,7 +103,22 @@ async function applyPolicy(ctx, userId) {
   }
 
   if (isVIP(ctx.chat.id, userId)) {
-    await ctx.api.unrestrictChatMember(ctx.chat.id, userId);
+    await ctx.api.restrictChatMember(
+      ctx.chat.id,
+      userId,
+      {
+        can_send_messages: true,
+        can_send_audios: true,
+        can_send_documents: true,
+        can_send_photos: true,
+        can_send_videos: true,
+        can_send_video_notes: true,
+        can_send_voice_notes: true,
+        can_send_polls: true,
+        can_send_other_messages: true,
+        can_add_web_page_previews: true
+      }
+    );
   } else {
     await ctx.api.restrictChatMember(
       ctx.chat.id,
@@ -111,7 +127,6 @@ async function applyPolicy(ctx, userId) {
     );
   }
 }
-
 export function registerCommands(bot) {
 
   loadDB();
