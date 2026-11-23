@@ -28,11 +28,39 @@ async function loadDB() {
     db.pendingTags ||= {};
     db.messageCleanup ||= {};
 
+    // KHAN MEDIA
+    db.media ||= {};
+    db.pendingMedia ||= {};
+    db.mediaSettings ||= {
+      channelId: null,
+      adChannel: null,
+      adLink: null,
+      adEnabled: false
+    };
+
   } catch {
+    db = {
+      vip: {},
+      vipNames: {},
+      muted: {},
+      profiles: {},
+      setup: {},
+      tags: {},
+      pendingTags: {},
+      messageCleanup: {},
+      media: {},
+      pendingMedia: {},
+      mediaSettings: {
+        channelId: null,
+        adChannel: null,
+        adLink: null,
+        adEnabled: false
+      }
+    };
+
     await saveDB();
   }
 }
-
 
 async function saveDB() {
   await fs.writeFile(DB_FILE, JSON.stringify(db, null, 2));
@@ -244,11 +272,58 @@ export function registerCommands(bot) {
   }, 60 * 1000);
 
   // START
-  bot.command("start", async (ctx) => {
-    await ctx.reply(
-      `سلام ${ctx.from.first_name} 🌹\nربات مدیریت گروه فعاله.`
-    );
-  });
+bot.command("start", async (ctx) => {
+const payload = ctx.startPayload;
+
+// دریافت لینک اختصاصی مدیا
+if (payload && payload.startsWith("media_")) {
+const id = payload.replace("media_", "");
+const media = db.media[id];
+
+if (!media) {
+  return ctx.reply("❌ این مدیا موجود نیست.");
+}
+
+// بررسی عضویت تبلیغاتی
+if (db.mediaSettings.adEnabled) {
+  return ctx.reply(
+    "برای مشاهده مدیا ابتدا عضو کانال تبلیغاتی شو.",
+    {
+      reply_markup: {
+        inline_keyboard: [
+          [{
+            text: "📢 عضویت در کانال",
+            url: db.mediaSettings.adLink
+          }],
+          [{
+            text: "✅ عضو شدم، نمایش مدیا",
+            callback_data: "show_media_" + id
+          }]
+        ]
+      }
+    }
+  );
+}
+
+// ارسال مستقیم مدیا
+const method = "send" + media.type.charAt(0).toUpperCase() + media.type.slice(1);
+
+return bot.telegram[method](
+  ctx.from.id,
+  media.file_id,
+  media.type === "video_note" ? { protect_content: true } : {
+    caption: media.caption,
+    protect_content: true
+  }
+);
+
+}
+
+// پیام معمولی شروع ربات
+await ctx.reply(
+"سلام ${ctx.from.first_name} 🌹\nربات مدیریت گروه فعاله.\n\n📩 برای ارسال مدیا، عکس یا فیلم خودت رو همین‌جا بفرست."
+);
+});
 
   // HELP
   bot.command("help", async (ctx) => {
@@ -711,7 +786,7 @@ bot.hears("خان", async (ctx) => {
 });
 
   // EXPIRED VIP AND MUTE CHECK
-  setInterval(async () => {
+    setInterval(async () => {
     const now = Date.now();
 
     for (const key of Object.keys(db.vip)) {
@@ -729,6 +804,230 @@ bot.hears("خان", async (ctx) => {
       }
     }
   }, 60000);
+
+  // ===== KHAN MEDIA =====
+
+  function getMedia(msg) {
+    if (msg.photo) {
+      return {
+        type: "photo",
+        file_id: msg.photo[msg.photo.length - 1].file_id
+      };
+    }
+
+    for (const type of ["video", "document", "animation", "audio", "voice", "video_note"]) {
+      if (msg[type]) {
+        return {
+          type,
+          file_id: msg[type].file_id
+        };
+      }
+    }
+
+    return null;
+  }
+
+  // تنظیم کانال خان مدیا
+  bot.hears(/^تنظیم کانال مدیا (.+)$/, async (ctx) => {
+    if (!isOwner(ctx)) return;
+
+    db.mediaSettings.channelId = ctx.match[1].trim();
+    await saveDB();
+
+    await ctx.reply("✅ کانال خان مدیا تنظیم شد.");
+  });
+
+  // تنظیم کانال تبلیغاتی
+  bot.hears(/^تنظیم تبلیغ (.+) (https:\/\/\S+)$/, async (ctx) => {
+    if (!isOwner(ctx)) return;
+
+    db.mediaSettings.adChannel = ctx.match[1].trim();
+    db.mediaSettings.adLink = ctx.match[2].trim();
+
+    await saveDB();
+    await ctx.reply("✅ کانال تبلیغاتی ثبت شد.");
+  });
+
+  // روشن کردن تبلیغات
+  bot.hears("روشن کردن تبلیغات", async (ctx) => {
+    if (!isOwner(ctx)) return;
+
+    if (!db.mediaSettings.adChannel) {
+      return ctx.reply("⚠️ ابتدا کانال تبلیغاتی را تنظیم کن.");
+    }
+
+    db.mediaSettings.adEnabled = true;
+    await saveDB();
+
+    await ctx.reply("✅ عضویت اجباری روشن شد.");
+  });
+
+  // خاموش کردن تبلیغات
+  bot.hears("خاموش کردن تبلیغات", async (ctx) => {
+    if (!isOwner(ctx)) return;
+
+    db.mediaSettings.adEnabled = false;
+    await saveDB();
+
+    await ctx.reply("✅ عضویت اجباری خاموش شد.");
+  });
+
+  // حذف کانال تبلیغاتی
+  bot.hears("حذف کانال تبلیغاتی", async (ctx) => {
+    if (!isOwner(ctx)) return;
+
+    db.mediaSettings.adChannel = null;
+    db.mediaSettings.adLink = null;
+    db.mediaSettings.adEnabled = false;
+
+    await saveDB();
+    await ctx.reply("✅ کانال تبلیغاتی حذف شد.");
+  });
+
+  // دریافت مدیا از کاربران
+  bot.on("message", async (ctx, next) => {
+    if (ctx.chat.type !== "private") return next();
+    if (isOwner(ctx)) return next();
+
+    const media = getMedia(ctx.message);
+    if (!media) return next();
+
+    const id = Date.now().toString();
+
+    db.pendingMedia[id] = {
+      ...media,
+      caption: ctx.message.caption || ""
+    };
+
+    await saveDB();
+
+    await ctx.reply("✅ مدیای شما دریافت شد و منتظر تأیید مدیر است.");
+
+    const options = {};
+    if (media.type !== "video_note") {
+      options.caption = "📩 مدیای جدید برای بررسی\nشناسه: " + id;
+    }
+
+    const method = "send" + media.type.charAt(0).toUpperCase() + media.type.slice(1);
+
+    await bot.telegram[method](OWNER_ID, media.file_id, options);
+
+    await bot.telegram.sendMessage(
+      OWNER_ID,
+      "مدیا را تأیید یا رد کن.",
+      {
+        reply_markup: {
+          inline_keyboard: [[
+            { text: "✅ تأیید و انتشار", callback_data: "media_yes_" + id },
+            { text: "❌ رد", callback_data: "media_no_" + id }
+          ]]
+        }
+      }
+    );
+
+    return;
+  });
+
+  // تأیید و انتشار مدیا
+  bot.action(/^media_yes_(.+)$/, async (ctx) => {
+    if (!isOwner(ctx)) return;
+
+    const id = ctx.match[1];
+    const media = db.pendingMedia[id];
+
+    if (!media) return ctx.answerCbQuery("مدیا پیدا نشد.");
+
+    if (!db.mediaSettings.channelId) {
+      return ctx.answerCbQuery("کانال مدیا تنظیم نشده است.");
+    }
+
+    try {
+      const method = "send" + media.type.charAt(0).toUpperCase() + media.type.slice(1);
+
+      const sent = await bot.telegram[method](
+        db.mediaSettings.channelId,
+        media.file_id,
+        media.type === "video_note" ? {} : { caption: media.caption }
+      );
+
+      db.media[id] = {
+        ...media,
+        channelMessageId: sent.message_id
+      };
+
+      delete db.pendingMedia[id];
+      await saveDB();
+
+      const me = await bot.telegram.getMe();
+      const link = `https://t.me/${me.username}?start=media_${id}`;
+
+      await ctx.editMessageText(
+        "✅ مدیا منتشر شد.\n\nلینک اختصاصی:\n" + link
+      );
+
+      await ctx.answerCbQuery("منتشر شد.");
+    } catch (err) {
+      console.error(err);
+      await ctx.answerCbQuery("خطا در انتشار مدیا.");
+    }
+  });
+
+  // رد مدیا
+  bot.action(/^media_no_(.+)$/, async (ctx) => {
+    if (!isOwner(ctx)) return;
+
+    const id = ctx.match[1];
+
+    if (!db.pendingMedia[id]) {
+      return ctx.answerCbQuery("مدیا پیدا نشد.");
+    }
+
+    delete db.pendingMedia[id];
+    await saveDB();
+
+    await ctx.editMessageText("❌ مدیا رد شد.");
+    await ctx.answerCbQuery("رد شد.");
+  });
+
+  // نمایش مدیا با لینک اختصاصی
+  bot.action(/^show_media_(.+)$/, async (ctx) => {
+    const id = ctx.match[1];
+    const media = db.media[id];
+
+    if (!media) return ctx.answerCbQuery("مدیا موجود نیست.");
+
+    try {
+      if (db.mediaSettings.adEnabled) {
+        const member = await bot.telegram.getChatMember(
+          db.mediaSettings.adChannel,
+          ctx.from.id
+        );
+
+        const joined = ["creator", "administrator", "member"].includes(member.status)
+          || (member.status === "restricted" && member.is_member);
+
+        if (!joined) {
+          return ctx.answerCbQuery("ابتدا عضو کانال تبلیغاتی شو.");
+        }
+      }
+
+      const method = "send" + media.type.charAt(0).toUpperCase() + media.type.slice(1);
+
+      await bot.telegram[method](
+        ctx.from.id,
+        media.file_id,
+        media.type === "video_note" ? { protect_content: true } : {
+          caption: media.caption,
+          protect_content: true
+        }
+      );
+
+      await ctx.answerCbQuery("مدیا ارسال شد.");
+    } catch (err) {
+      console.error(err);
+      await ctx.answerCbQuery("خطا در ارسال مدیا.");
+    }
+  });
 
   bot.command("ping", (ctx) => ctx.reply("ربات فعاله ✅"));
 }
