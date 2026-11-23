@@ -12,7 +12,8 @@ let db = {
   setup: {},
   tags: {},
   pendingTags: {},
-  messageCleanup: {}
+    messageCleanup: {},
+  memberChannels: {}
 };
 
 async function loadDB() {
@@ -20,13 +21,14 @@ async function loadDB() {
     db = JSON.parse(await fs.readFile(DB_FILE, "utf8"));
 
     db.vip ||= {};
-    db.vipNames ||= {};
-    db.muted ||= {};
-    db.profiles ||= {};
-    db.setup ||= {};
-    db.tags ||= {};
-    db.pendingTags ||= {};
-    db.messageCleanup ||= {};
+db.vipNames ||= {};
+db.muted ||= {};
+db.profiles ||= {};
+db.setup ||= {};
+db.tags ||= {};
+db.pendingTags ||= {};
+db.messageCleanup ||= {};
+db.memberChannels ||= {};
 
     // KHAN MEDIA
     db.media ||= {};
@@ -40,22 +42,22 @@ async function loadDB() {
 
   } catch {
     db = {
-      vip: {},
       vipNames: {},
-      muted: {},
-      profiles: {},
-      setup: {},
-      tags: {},
-      pendingTags: {},
-      messageCleanup: {},
-      media: {},
-      pendingMedia: {},
-      mediaSettings: {
-        channelId: null,
-        adChannel: null,
-        adLink: null,
-        adEnabled: false
-      }
+muted: {},
+profiles: {},
+setup: {},
+tags: {},
+pendingTags: {},
+messageCleanup: {},
+memberChannels: {},
+media: {},
+pendingMedia: {},
+mediaSettings: {
+  channelId: null,
+  adChannel: null,
+  adLink: null,
+  adEnabled: false
+}
     };
 
     await saveDB();
@@ -270,7 +272,46 @@ export function registerCommands(bot) {
       console.error("AUTO DELETE ERROR:", err);
     }
   }, 60 * 1000);
+// ثبت کانال اختصاصی هر ممبر
+bot.command("setchannel", async (ctx) => {
+  if (ctx.chat.type !== "private") {
+    return ctx.reply("⚠️ این دستور رو در پی‌وی خان اجرا کن.");
+  }
 
+  const channelId = String(ctx.match || "").trim();
+
+  if (!channelId) {
+    return ctx.reply(
+      "📢 شناسه کانالت رو همراه دستور بفرست.\n\nمثال:\n/setchannel -1001234567890"
+    );
+  }
+
+  try {
+    const botInfo = await ctx.api.getMe();
+    const botMember = await ctx.api.getChatMember(channelId, botInfo.id);
+    const userMember = await ctx.api.getChatMember(channelId, ctx.from.id);
+
+    if (!["administrator", "creator"].includes(botMember.status)) {
+      return ctx.reply("❌ اول خان رو در کانالت ادمین کن.");
+    }
+
+    if (!["administrator", "creator"].includes(userMember.status)) {
+      return ctx.reply("❌ باید خودت مدیر این کانال باشی.");
+    }
+
+    if (botMember.status === "administrator" && !botMember.can_post_messages) {
+      return ctx.reply("❌ اجازه انتشار پست رو به خان بده.");
+    }
+
+    db.memberChannels[ctx.from.id] = channelId;
+    await saveDB();
+
+    await ctx.reply("✅ کانالت با موفقیت ثبت شد.");
+  } catch (err) {
+    console.error("SET CHANNEL ERROR:", err);
+    await ctx.reply("❌ نتونستم کانال رو بررسی کنم. شناسه و دسترسی خان رو بررسی کن.");
+  }
+});
 // START
 bot.command("start", async (ctx) => {
   const payload = String(ctx.match || "").trim();
