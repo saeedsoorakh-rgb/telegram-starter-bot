@@ -929,65 +929,72 @@ bot.hears("خان", async (ctx) => {
   });
 
   // تأیید و انتشار مدیا
-  bot.action(/^media_yes_(.+)$/, async (ctx) => {
-    if (!isOwner(ctx)) return;
+bot.callbackQuery(/^media_yes_(.+)$/, async (ctx) => {
+if (!isOwner(ctx)) {
+return ctx.answerCallbackQuery("فقط مدیر اصلی اجازه دارد.");
+}
 
-    const id = ctx.match[1];
-    const media = db.pendingMedia[id];
+const id = ctx.match[1];
+const media = db.pendingMedia[id];
 
-    if (!media) return ctx.answerCbQuery("مدیا پیدا نشد.");
+if (!media) {
+return ctx.answerCallbackQuery("مدیا پیدا نشد.");
+}
 
-    if (!db.mediaSettings.channelId) {
-      return ctx.answerCbQuery("کانال مدیا تنظیم نشده است.");
-    }
+if (!db.mediaSettings.channelId) {
+return ctx.answerCallbackQuery("کانال مدیا تنظیم نشده است.");
+}
 
-    try {
-      const method = "send" + media.type.charAt(0).toUpperCase() + media.type.slice(1);
+try {
+const method = "send" + media.type.charAt(0).toUpperCase() + media.type.slice(1);
 
-      const sent = await bot.telegram[method](
-        db.mediaSettings.channelId,
-        media.file_id,
-        media.type === "video_note" ? {} : { caption: media.caption }
-      );
+const sent = await bot.api[method](
+  db.mediaSettings.channelId,
+  media.file_id,
+  media.type === "video_note" ? {} : { caption: media.caption }
+);
 
-      db.media[id] = {
-        ...media,
-        channelMessageId: sent.message_id
-      };
+db.media[id] = {
+  ...media,
+  channelMessageId: sent.message_id
+};
 
-      delete db.pendingMedia[id];
-      await saveDB();
+delete db.pendingMedia[id];
+await saveDB();
 
-      const me = await bot.telegram.getMe();
-      const link = `https://t.me/${me.username}?start=media_${id}`;
+const me = await bot.api.getMe();
+const link = `https://t.me/${me.username}?start=media_${id}`;
 
-      await ctx.editMessageText(
-        "✅ مدیا منتشر شد.\n\nلینک اختصاصی:\n" + link
-      );
+await ctx.editMessageText(
+  "✅ مدیا منتشر شد.\n\nلینک اختصاصی:\n" + link
+);
 
-      await ctx.answerCbQuery("منتشر شد.");
-    } catch (err) {
-      console.error(err);
-      await ctx.answerCbQuery("خطا در انتشار مدیا.");
-    }
-  });
+await ctx.answerCallbackQuery("منتشر شد.");
 
-  // رد مدیا
-  bot.action(/^media_no_(.+)$/, async (ctx) => {
-    if (!isOwner(ctx)) return;
+} catch (err) {
+console.error(err);
+await ctx.answerCallbackQuery("خطا در انتشار مدیا.");
+}
+});
 
-    const id = ctx.match[1];
+// رد مدیا
+bot.callbackQuery(/^media_no_(.+)$/, async (ctx) => {
+if (!isOwner(ctx)) {
+return ctx.answerCallbackQuery("فقط مدیر اصلی اجازه دارد.");
+}
 
-    if (!db.pendingMedia[id]) {
-      return ctx.answerCbQuery("مدیا پیدا نشد.");
-    }
+const id = ctx.match[1];
 
-    delete db.pendingMedia[id];
-    await saveDB();
+if (!db.pendingMedia[id]) {
+return ctx.answerCallbackQuery("مدیا پیدا نشد.");
+}
 
-    await ctx.editMessageText("❌ مدیا رد شد.");
-    await ctx.answerCbQuery("رد شد.");
-  });
+delete db.pendingMedia[id];
+await saveDB();
+
+await ctx.editMessageText("❌ مدیا رد شد.");
+await ctx.answerCallbackQuery("رد شد.");
+});
 
   // نمایش مدیا با لینک اختصاصی
   bot.action(/^show_media_(.+)$/, async (ctx) => {
