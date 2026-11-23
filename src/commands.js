@@ -346,7 +346,15 @@ bot.command("start", async (ctx) => {
       );
     }
 
-    // ارسال مدیا فقط در چت خصوصی کاربر
+    // انتشار مدیا در کانال اختصاصی ممبر
+    const memberChannel = db.memberChannels[ctx.from.id];
+
+    if (!memberChannel) {
+      return ctx.reply(
+        "⚠️ هنوز کانالت رو ثبت نکردی.\n\nابتدا کانالت رو با دستور زیر ثبت کن:\n/setchannel شناسه_کانال"
+      );
+    }
+
     const methods = {
       photo: "sendPhoto",
       video: "sendVideo",
@@ -362,17 +370,23 @@ bot.command("start", async (ctx) => {
       return ctx.reply("❌ نوع این مدیا پشتیبانی نمی‌شود.");
     }
 
-    return ctx.api[method](
-      ctx.chat.id,
-      media.file_id,
-      media.type === "video_note"
-        ? { protect_content: true }
-        : {
-            caption: media.caption || "",
-            protect_content: true
-          }
-    );
-  }
+    try {
+      await ctx.api[method](
+        memberChannel,
+        media.file_id,
+        media.type === "video_note"
+          ? { protect_content: true }
+          : {
+              caption: media.caption || "",
+              protect_content: true
+            }
+      );
+
+      return ctx.reply("✅ مدیا در کانال شما منتشر شد.");
+    } catch (err) {
+      console.error("MEMBER CHANNEL PUBLISH ERROR:", err);
+      return ctx.reply("❌ انتشار در کانالت انجام نشد. دسترسی خان رو بررسی کن.");
+    }
 
   // پیام معمولی شروع ربات
   await ctx.reply(
@@ -1008,10 +1022,12 @@ const sent = await bot.api[method](
   db.mediaSettings.channelId,
   media.file_id,
   media.type === "video_note"
-    ? {}
-    : { caption: media.caption || "" }
+  ? { protect_content: true }
+  : {
+      caption: media.caption || "",
+      protect_content: true
+    }
 );
-
 db.media[id] = {
   ...media,
   channelMessageId: sent.message_id
@@ -1060,7 +1076,7 @@ await ctx.editMessageText("❌ مدیا رد شد.");
 await ctx.answerCallbackQuery("رد شد.");
 });
 
-// نمایش مدیا با لینک اختصاصی
+// نمایش مدیا در کانال اختصاصی ممبر
 bot.callbackQuery(/^show_media_(.+)$/, async (ctx) => {
   const id = ctx.match[1];
   const media = db.media[id];
@@ -1070,6 +1086,7 @@ bot.callbackQuery(/^show_media_(.+)$/, async (ctx) => {
   }
 
   try {
+    // بررسی عضویت در کانال تبلیغاتی
     if (db.mediaSettings.adEnabled) {
       const member = await ctx.api.getChatMember(
         db.mediaSettings.adChannel,
@@ -1085,25 +1102,46 @@ bot.callbackQuery(/^show_media_(.+)$/, async (ctx) => {
       }
     }
 
-    const method =
-      "send" + media.type.charAt(0).toUpperCase() + media.type.slice(1);
+    // پیدا کردن کانال ثبت‌شده ممبر
+    const memberChannel = db.memberChannels[ctx.from.id];
+
+    if (!memberChannel) {
+      return ctx.answerCallbackQuery(
+        "ابتدا کانال خودت رو با دستور /setchannel ثبت کن."
+      );
+    }
+
+    const methods = {
+      photo: "sendPhoto",
+      video: "sendVideo",
+      document: "sendDocument",
+      audio: "sendAudio",
+      voice: "sendVoice",
+      video_note: "sendVideoNote"
+    };
+
+    const method = methods[media.type];
+
+    if (!method) {
+      return ctx.answerCallbackQuery("نوع مدیا پشتیبانی نمی‌شود.");
+    }
 
     await ctx.api[method](
-      ctx.from.id,
+      memberChannel,
       media.file_id,
       media.type === "video_note"
         ? { protect_content: true }
         : {
-            caption: media.caption,
+            caption: media.caption || "",
             protect_content: true
           }
     );
 
-    await ctx.answerCallbackQuery("مدیا ارسال شد.");
+    await ctx.answerCallbackQuery("مدیا در کانالت منتشر شد.");
 
   } catch (err) {
-    console.error(err);
-    await ctx.answerCallbackQuery("خطا در ارسال مدیا.");
+    console.error("SHOW MEDIA ERROR:", err);
+    await ctx.answerCallbackQuery("خطا در انتشار مدیا در کانال.");
   }
 });
 
