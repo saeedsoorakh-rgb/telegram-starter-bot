@@ -928,7 +928,7 @@ bot.hears("خان", async (ctx) => {
     return;
   });
 
-  // تأیید و انتشار مدیا
+ // تأیید و انتشار مدیا
 bot.callbackQuery(/^media_yes_(.+)$/, async (ctx) => {
 if (!isOwner(ctx)) {
 return ctx.answerCallbackQuery("فقط مدیر اصلی اجازه دارد.");
@@ -946,12 +946,15 @@ return ctx.answerCallbackQuery("کانال مدیا تنظیم نشده است."
 }
 
 try {
-const method = "send" + media.type.charAt(0).toUpperCase() + media.type.slice(1);
+const method =
+"send" + media.type.charAt(0).toUpperCase() + media.type.slice(1);
 
 const sent = await bot.api[method](
   db.mediaSettings.channelId,
   media.file_id,
-  media.type === "video_note" ? {} : { caption: media.caption }
+  media.type === "video_note"
+    ? {}
+    : { caption: media.caption || "" }
 );
 
 db.media[id] = {
@@ -965,14 +968,20 @@ await saveDB();
 const me = await bot.api.getMe();
 const link = `https://t.me/${me.username}?start=media_${id}`;
 
+// ارسال لینک به گروه اصلی
+await bot.api.sendMessage(
+  -1004449300940,
+  "🎬 مدیای جدید منتشر شد.\n\n🔗 مشاهده مدیا:\n" + link
+);
+
 await ctx.editMessageText(
-  "✅ مدیا منتشر شد.\n\nلینک اختصاصی:\n" + link
+  "✅ مدیا منتشر شد.\n\n🔗 لینک اختصاصی:\n" + link
 );
 
 await ctx.answerCallbackQuery("منتشر شد.");
 
 } catch (err) {
-console.error(err);
+console.error("MEDIA PUBLISH ERROR:", err);
 await ctx.answerCallbackQuery("خطا در انتشار مدیا.");
 }
 });
