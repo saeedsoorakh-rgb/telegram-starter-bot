@@ -471,6 +471,46 @@ bot.hears("رفع سکوت", async (ctx) => {
   }
 });
 
+// PIN REPLIED MESSAGE
+bot.hears("پین", async (ctx) => {
+  if (ctx.chat.type === "private") return;
+
+  const userId = ctx.from.id;
+
+  try {
+    const member = await ctx.api.getChatMember(
+      ctx.chat.id,
+      userId
+    );
+
+    const isAdmin =
+      member.status === "creator" ||
+      member.status === "administrator";
+
+    const vip = isVIP(ctx.chat.id, userId);
+
+    if (!isAdmin && !vip) {
+      return ctx.reply("⛔ فقط مدیران و اعضای VIP اجازه پین دارند.");
+    }
+
+    const replied = ctx.message.reply_to_message;
+
+    if (!replied) {
+      return ctx.reply("⚠️ باید روی پیام موردنظر ریپلای کنی.");
+    }
+
+    await ctx.api.pinChatMessage(
+      ctx.chat.id,
+      replied.message_id
+    );
+
+    await ctx.reply("📌 پیام با موفقیت پین شد.");
+
+  } catch (err) {
+    console.error("PIN ERROR:", err);
+    await ctx.reply("❌ امکان پین کردن این پیام وجود ندارد.");
+  }
+});
  // SET PROFILE
   bot.hears("ثبت اصل", async (ctx) => {
     if (ctx.chat.type === "private") return;
