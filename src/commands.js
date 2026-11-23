@@ -910,9 +910,9 @@ bot.hears("خان", async (ctx) => {
 
     const method = "send" + media.type.charAt(0).toUpperCase() + media.type.slice(1);
 
-    await bot.telegram[method](OWNER_ID, media.file_id, options);
+    await bot.api[method](OWNER_ID, media.file_id, options);
 
-    await bot.telegram.sendMessage(
+    await bot.api.sendMessage(
       OWNER_ID,
       "مدیا را تأیید یا رد کن.",
       {
