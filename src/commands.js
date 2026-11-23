@@ -680,20 +680,35 @@ bot.hears("اعتماد", async (ctx) => {
     );
   });
 
-  // WELCOME + NEW MEMBER RESTRICTION
-  bot.on("message:new_chat_members", async (ctx) => {
-    for (const user of ctx.message.new_chat_members) {
-      if (user.is_bot) continue;
+// WELCOME + NEW MEMBER RESTRICTION
+bot.on("message:new_chat_members", async (ctx) => {
+  for (const user of ctx.message.new_chat_members) {
+    if (user.is_bot) continue;
 
-      if (db.setup[ctx.chat.id]) {
-        await applyPolicy(ctx, user.id).catch(console.error);
-      }
-
-      await ctx.reply(
-        `🌹 به گروه خوش آمدی ${user.first_name}!`
-      );
+    if (db.setup[ctx.chat.id]) {
+      await applyPolicy(ctx, user.id).catch(console.error);
     }
-  });
+
+    await ctx.reply(
+      `🌹 به گروه خوش آمدی ${user.first_name}!`
+    );
+  }
+});
+
+// KHAN REPLY
+bot.hears("خان", async (ctx) => {
+  if (ctx.from.is_bot) return;
+
+  const key = `${ctx.chat.id}_${ctx.from.id}`;
+  const tags = db.tags[key] || [];
+
+  if (tags.length > 0) {
+    const tag = tags[Math.floor(Math.random() * tags.length)];
+    return ctx.reply(`جان ${tag} ❤️`);
+  }
+
+  return ctx.reply("جان عزیزم ❤️");
+});
 
   // EXPIRED VIP AND MUTE CHECK
   setInterval(async () => {
