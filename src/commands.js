@@ -383,10 +383,11 @@ bot.command("start", async (ctx) => {
       );
 
       return ctx.reply("✅ مدیا در کانال شما منتشر شد.");
-    } catch (err) {
+        } catch (err) {
       console.error("MEMBER CHANNEL PUBLISH ERROR:", err);
       return ctx.reply("❌ انتشار در کانالت انجام نشد. دسترسی خان رو بررسی کن.");
     }
+  }
 
   // پیام معمولی شروع ربات
   await ctx.reply(
