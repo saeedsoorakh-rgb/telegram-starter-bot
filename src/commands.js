@@ -308,7 +308,7 @@ if (db.mediaSettings.adEnabled) {
 // ارسال مستقیم مدیا
 const method = "send" + media.type.charAt(0).toUpperCase() + media.type.slice(1);
 
-return bot.telegram[method](
+return ctx.api[method](
   ctx.from.id,
   media.file_id,
   media.type === "video_note" ? { protect_content: true } : {
@@ -996,45 +996,52 @@ await ctx.editMessageText("❌ مدیا رد شد.");
 await ctx.answerCallbackQuery("رد شد.");
 });
 
-  // نمایش مدیا با لینک اختصاصی
-  bot.action(/^show_media_(.+)$/, async (ctx) => {
-    const id = ctx.match[1];
-    const media = db.media[id];
+// نمایش مدیا با لینک اختصاصی
+bot.callbackQuery(/^show_media_(.+)$/, async (ctx) => {
+  const id = ctx.match[1];
+  const media = db.media[id];
 
-    if (!media) return ctx.answerCbQuery("مدیا موجود نیست.");
+  if (!media) {
+    return ctx.answerCallbackQuery("مدیا موجود نیست.");
+  }
 
-    try {
-      if (db.mediaSettings.adEnabled) {
-        const member = await bot.telegram.getChatMember(
-          db.mediaSettings.adChannel,
-          ctx.from.id
-        );
-
-        const joined = ["creator", "administrator", "member"].includes(member.status)
-          || (member.status === "restricted" && member.is_member);
-
-        if (!joined) {
-          return ctx.answerCbQuery("ابتدا عضو کانال تبلیغاتی شو.");
-        }
-      }
-
-      const method = "send" + media.type.charAt(0).toUpperCase() + media.type.slice(1);
-
-      await bot.telegram[method](
-        ctx.from.id,
-        media.file_id,
-        media.type === "video_note" ? { protect_content: true } : {
-          caption: media.caption,
-          protect_content: true
-        }
+  try {
+    if (db.mediaSettings.adEnabled) {
+      const member = await ctx.api.getChatMember(
+        db.mediaSettings.adChannel,
+        ctx.from.id
       );
 
-      await ctx.answerCbQuery("مدیا ارسال شد.");
-    } catch (err) {
-      console.error(err);
-      await ctx.answerCbQuery("خطا در ارسال مدیا.");
+      const joined =
+        ["creator", "administrator", "member"].includes(member.status) ||
+        (member.status === "restricted" && member.is_member);
+
+      if (!joined) {
+        return ctx.answerCallbackQuery("ابتدا عضو کانال تبلیغاتی شو.");
+      }
     }
-  });
+
+    const method =
+      "send" + media.type.charAt(0).toUpperCase() + media.type.slice(1);
+
+    await ctx.api[method](
+      ctx.from.id,
+      media.file_id,
+      media.type === "video_note"
+        ? { protect_content: true }
+        : {
+            caption: media.caption,
+            protect_content: true
+          }
+    );
+
+    await ctx.answerCallbackQuery("مدیا ارسال شد.");
+
+  } catch (err) {
+    console.error(err);
+    await ctx.answerCallbackQuery("خطا در ارسال مدیا.");
+  }
+});
 
   bot.command("ping", (ctx) => ctx.reply("ربات فعاله ✅"));
 }
