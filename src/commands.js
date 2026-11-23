@@ -271,58 +271,72 @@ export function registerCommands(bot) {
     }
   }, 60 * 1000);
 
-  // START
+// START
 bot.command("start", async (ctx) => {
-const payload = ctx.startPayload;
+  const payload = String(ctx.match || "").trim();
 
-// دریافت لینک اختصاصی مدیا
-if (payload && payload.startsWith("media_")) {
-const id = payload.replace("media_", "");
-const media = db.media[id];
+  // دریافت لینک اختصاصی مدیا
+  if (payload.startsWith("media_")) {
+    const id = payload.replace("media_", "");
+    const media = db.media[id];
 
-if (!media) {
-  return ctx.reply("❌ این مدیا موجود نیست.");
-}
-
-// بررسی عضویت تبلیغاتی
-if (db.mediaSettings.adEnabled) {
-  return ctx.reply(
-    "برای مشاهده مدیا ابتدا عضو کانال تبلیغاتی شو.",
-    {
-      reply_markup: {
-        inline_keyboard: [
-          [{
-            text: "📢 عضویت در کانال",
-            url: db.mediaSettings.adLink
-          }],
-          [{
-            text: "✅ عضو شدم، نمایش مدیا",
-            callback_data: "show_media_" + id
-          }]
-        ]
-      }
+    if (!media) {
+      return ctx.reply("❌ این مدیا موجود نیست.");
     }
-  );
-}
 
-// ارسال مستقیم مدیا
-const method = "send" + media.type.charAt(0).toUpperCase() + media.type.slice(1);
+    // بررسی عضویت تبلیغاتی
+    if (db.mediaSettings.adEnabled) {
+      return ctx.reply(
+        "برای مشاهده مدیا ابتدا عضو کانال تبلیغاتی شو.",
+        {
+          reply_markup: {
+            inline_keyboard: [
+              [{
+                text: "📢 عضویت در کانال",
+                url: db.mediaSettings.adLink
+              }],
+              [{
+                text: "✅ عضو شدم، نمایش مدیا",
+                callback_data: "show_media_" + id
+              }]
+            ]
+          }
+        }
+      );
+    }
 
-return ctx.api[method](
-  ctx.from.id,
-  media.file_id,
-  media.type === "video_note" ? { protect_content: true } : {
-    caption: media.caption,
-    protect_content: true
+    // ارسال مدیا فقط در چت خصوصی کاربر
+    const methods = {
+      photo: "sendPhoto",
+      video: "sendVideo",
+      document: "sendDocument",
+      audio: "sendAudio",
+      voice: "sendVoice",
+      video_note: "sendVideoNote"
+    };
+
+    const method = methods[media.type];
+
+    if (!method) {
+      return ctx.reply("❌ نوع این مدیا پشتیبانی نمی‌شود.");
+    }
+
+    return ctx.api[method](
+      ctx.chat.id,
+      media.file_id,
+      media.type === "video_note"
+        ? { protect_content: true }
+        : {
+            caption: media.caption || "",
+            protect_content: true
+          }
+    );
   }
-);
 
-}
-
-// پیام معمولی شروع ربات
-await ctx.reply(
-"سلام ${ctx.from.first_name} 🌹\nربات مدیریت گروه فعاله.\n\n📩 برای ارسال مدیا، عکس یا فیلم خودت رو همین‌جا بفرست."
-);
+  // پیام معمولی شروع ربات
+  await ctx.reply(
+    `سلام ${ctx.from.first_name} 🌹\nربات مدیریت گروه فعاله.\n\n📩 برای ارسال مدیا، عکس یا فیلم خودت رو همین‌جا بفرست.`
+  );
 });
 
   // HELP
