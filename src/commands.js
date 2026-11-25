@@ -659,7 +659,6 @@ bot.hears("رفع سکوت", async (ctx) => {
   }
 });
 
-
 // ASL FORM
 bot.hears("فرم اصل", async (ctx) => {
   if (ctx.chat.type === "private") return;
@@ -686,13 +685,13 @@ bot.hears("فرم اصل", async (ctx) => {
 
 📜 راهنمای گروه و ثبت اصل
 
-<a href="https://t.me/hotiiiiwife/11">📋 قوانین گروه</a>
+<a href="https://t.me/c/6047972127/11">📋 قوانین گروه</a>
 
 
-<a href="https://t.me/hotiiiiwife/6">🌈 راهنمای گرایشات</a>
+<a href="https://t.me/c/6047972127/6">🌈 راهنمای گرایشات</a>
 
 
-<a href="https://t.me/hotiiiiwife/7">🌶️ راهنمای رول‌ها و اصطلاحات</a>
+<a href="https://t.me/c/6047972127/7">🌶️ راهنمای رول‌ها و اصطلاحات</a>
 
 
 ━━━━━━━━━━━━━━━━━━
