@@ -1251,10 +1251,15 @@ await saveDB();
 const me = await bot.api.getMe();
 const link = `https://t.me/${me.username}?start=media_${id}`;
 
-// ارسال فقط لینک به گروه اصلی، بدون پیش‌نمایش
+// ارسال کپشن و لینک به گروه اصلی
+const groupText =
+  "🎬 مدیای جدید منتشر شد.\n\n" +
+  (media.caption ? "📝 " + media.caption + "\n\n" : "") +
+  "🔗 مشاهده مدیا:\n" + link;
+
 await bot.api.sendMessage(
   -1004449300940,
-  "🎬 مدیای جدید منتشر شد.\n\n🔗 مشاهده مدیا:\n" + link,
+  groupText,
   {
     link_preview_options: {
       is_disabled: true
