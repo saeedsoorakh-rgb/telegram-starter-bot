@@ -810,34 +810,63 @@ bot.hears("ثبت اصل", async (ctx) => {
   });
 
   
+// PROFILE MENU
+function profileMenu(key) {
+  const count = db.tags?.[key]?.length || 0;
+
+  return {
+    inline_keyboard: [
+      [
+        {
+          text: "👤 Personal Profile",
+          callback_data: `pr|p|${key}`
+        }
+      ],
+      [
+        {
+          text: `🏷 Tags (${count})`,
+          callback_data: `pr|t|${key}|0`
+        }
+      ]
+    ]
+  };
+}
+
 // SHOW PROFILE
 bot.hears("اصل", async (ctx) => {
   const key = targetKey(ctx);
 
   if (!key) return ctx.reply("روی پیام شخص ریپلای کن.");
 
-  const profile = db.profiles[key];
+  if (!db.profiles[key]) {
+    return ctx.reply("پرونده‌ای ثبت نشده.");
+  }
 
-  if (!profile) return ctx.reply("پرونده‌ای ثبت نشده.");
+  await ctx.reply("📋 پرونده عضو\n\nبرای مشاهده بخش موردنظر انتخاب کن:", {
+    reply_markup: profileMenu(key)
+  });
+});
 
-  const keyboard = {
-    inline_keyboard: [
-      [
-        { text: "👤 Personal Profile", callback_data: `profile_p_${key}` },
-        { text: "🏷 Tags", callback_data: `profile_t_${key}` }
-      ]
-    ]
-  };
+// MY PROFILE
+bot.hears("اصل من", async (ctx) => {
+  if (!ctx.from) return;
 
-  await ctx.reply("📋 برای مشاهده اطلاعات، یکی از گزینه‌ها را انتخاب کن:", {
-    reply_markup: keyboard
+  const key = `${ctx.chat.id}_${ctx.from.id}`;
+
+  if (!db.profiles[key]) {
+    return ctx.reply("📋 هنوز پرونده‌ای برای شما ثبت نشده.");
+  }
+
+  await ctx.reply("📋 پرونده شخصی شما\n\nیک بخش را انتخاب کن:", {
+    reply_markup: profileMenu(key)
   });
 });
 
 // PROFILE BUTTONS
-bot.callbackQuery(/^profile_(p|t)_(-?\d+_\d+)$/, async (ctx) => {
+bot.callbackQuery(/^pr\|(p|t)\|(-?\d+_\d+)(?:\|(\d+))?$/, async (ctx) => {
   const type = ctx.match[1];
   const key = ctx.match[2];
+  const page = Number(ctx.match[3] || 0);
 
   const profile = db.profiles[key];
 
@@ -847,33 +876,90 @@ bot.callbackQuery(/^profile_(p|t)_(-?\d+_\d+)$/, async (ctx) => {
     });
   }
 
-  const tags = db.tags?.[key] || [];
-
-  let text = "📋 اطلاعات پرونده";
+  let text = "";
+  let keyboard;
 
   if (type === "p") {
     text = "👤 Personal Profile\n\n" + profile.text;
+
+    keyboard = {
+      inline_keyboard: [
+        [
+          {
+            text: "🔙 Back",
+            callback_data: `pr|m|${key}`
+          }
+        ]
+      ]
+    };
   }
 
   if (type === "t") {
-    text = "🏷 Tags\n\n" +
-      (tags.length
-        ? tags.map(tag => "⭐ " + tag).join("\n")
-        : "هنوز برچسبی ثبت نشده.");
-  }
+    const tags = db.tags?.[key] || [];
 
-  const keyboard = {
-    inline_keyboard: [
-      [
-        { text: "👤 Personal Profile", callback_data: `profile_p_${key}` },
-        { text: "🏷 Tags", callback_data: `profile_t_${key}` }
+    const perPage = 10;
+    const totalPages = Math.max(1, Math.ceil(tags.length / perPage));
+    const currentPage = Math.min(page, totalPages - 1);
+
+    const start = currentPage * perPage;
+    const shownTags = tags.slice(start, start + perPage);
+
+    text = `🏷 Tags\n\nتعداد کل: ${tags.length}\nصفحه ${currentPage + 1} از ${totalPages}\n\n`;
+
+    text += shownTags.length
+      ? shownTags.map((tag, i) => `${start + i + 1}. ⭐ ${tag}`).join("\n")
+      : "هنوز برچسبی ثبت نشده.";
+
+    keyboard = {
+      inline_keyboard: [
+        [
+          ...(currentPage > 0
+            ? [{
+                text: "⬅️ Previous",
+                callback_data: `pr|t|${key}|${currentPage - 1}`
+              }]
+            : []),
+
+          ...(currentPage < totalPages - 1
+            ? [{
+                text: "Next ➡️",
+                callback_data: `pr|t|${key}|${currentPage + 1}`
+              }]
+            : [])
+        ],
+        [
+          {
+            text: "🔙 Back",
+            callback_data: `pr|m|${key}`
+          }
+        ]
       ]
-    ]
-  };
+    };
+  }
 
   await ctx.editMessageText(text, {
     reply_markup: keyboard
   });
+
+  await ctx.answerCallbackQuery();
+});
+
+// BACK TO PROFILE MENU
+bot.callbackQuery(/^pr\|m\|(-?\d+_\d+)$/, async (ctx) => {
+  const key = ctx.match[1];
+
+  if (!db.profiles[key]) {
+    return ctx.answerCallbackQuery({
+      text: "پرونده پیدا نشد."
+    });
+  }
+
+  await ctx.editMessageText(
+    "📋 پرونده عضو\n\nبرای مشاهده بخش موردنظر انتخاب کن:",
+    {
+      reply_markup: profileMenu(key)
+    }
+  );
 
   await ctx.answerCallbackQuery();
 });
