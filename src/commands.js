@@ -1040,12 +1040,16 @@ await saveDB();
 const me = await bot.api.getMe();
 const link = `https://t.me/${me.username}?start=media_${id}`;
 
-// ارسال لینک به گروه اصلی
+// ارسال فقط لینک به گروه اصلی، بدون پیش‌نمایش
 await bot.api.sendMessage(
   -1004449300940,
-  "🎬 مدیای جدید منتشر شد.\n\n🔗 مشاهده مدیا:\n" + link
+  "🎬 مدیای جدید منتشر شد.\n\n🔗 مشاهده مدیا:\n" + link,
+  {
+    link_preview_options: {
+      is_disabled: true
+    }
+  }
 );
-
 await ctx.editMessageText(
   "✅ مدیا منتشر شد.\n\n🔗 لینک اختصاصی:\n" + link
 );
