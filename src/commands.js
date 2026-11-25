@@ -682,7 +682,20 @@ bot.hears("فرم اصل", async (ctx) => {
       return ctx.reply("فقط مدیران و اعضای VIP اجازه دارند.");
     }
 
-    const form = `به گروه خوش اومدی
+    const form = `به گروه خوش اومدی 🌹
+
+📜 راهنمای گروه و ثبت اصل
+
+<a href="https://t.me/hotiiiiwife/11">📋 قوانین گروه</a>
+
+
+<a href="https://t.me/hotiiiiwife/6">🌈 راهنمای گرایشات</a>
+
+
+<a href="https://t.me/hotiiiiwife/7">🌶️ راهنمای رول‌ها و اصطلاحات</a>
+
+
+━━━━━━━━━━━━━━━━━━
 
 لطفا اصلت طبق موارد زیر رو ادمین ها رپلای کن تا اصلت ثبت کنند
 
@@ -700,7 +713,12 @@ bot.hears("فرم اصل", async (ctx) => {
 
 برای ثبت اصل خانم‌ها، ارسال وویس به ادمین الزامی است.`;
 
-    await ctx.reply(form);
+    await ctx.reply(form, {
+      parse_mode: "HTML",
+      link_preview_options: {
+        is_disabled: true
+      }
+    });
 
   } catch (err) {
     console.error("ASL FORM ERROR:", err);
