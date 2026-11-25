@@ -237,10 +237,14 @@ export function registerCommands(bot) {
       const hasLink =
         /https?:\/\/|www\.|t\.me\/|telegram\.me\/|[\w-]+\.(com|net|org|ir|io|me|co|info|biz|app|dev)(\/|\b)/i.test(content);
 
-      if (hasHiddenLink || hasLink) {
-        await ctx.api.deleteMessage(ctx.chat.id, msg.message_id);
-        return await next();
-      }
+      // لینک‌های اعضای VIP حذف نشوند
+if (
+  (hasHiddenLink || hasLink) &&
+  !isVIP(ctx.chat.id, ctx.from?.id)
+) {
+  await ctx.api.deleteMessage(ctx.chat.id, msg.message_id);
+  return await next();
+}
 
       const key = `${ctx.chat.id}_${msg.message_id}`;
       db.messageCleanup[key] = Date.now();
