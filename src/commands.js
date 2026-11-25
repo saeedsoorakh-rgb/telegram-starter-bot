@@ -1165,49 +1165,106 @@ bot.hears("خان", async (ctx) => {
     await ctx.reply("✅ کانال تبلیغاتی حذف شد.");
   });
 
-  // دریافت مدیا از کاربران
-  bot.on("message", async (ctx, next) => {
-    if (ctx.chat.type !== "private") return next();
-    if (isOwner(ctx)) return next();
+// دریافت مدیا از کاربران
+bot.on("message", async (ctx, next) => {
+  if (ctx.chat.type !== "private") return next();
+  if (isOwner(ctx)) return next();
 
-    const media = getMedia(ctx.message);
-    if (!media) return next();
+  const media = getMedia(ctx.message);
+  if (!media) return next();
 
-    const id = Date.now().toString();
+  const id = Date.now().toString();
 
-    db.pendingMedia[id] = {
-      ...media,
-      caption: ctx.message.caption || ""
-    };
+  // بررسی VIP بودن در گروه اصلی
+  const vip = isVIP(-1004449300940, ctx.from.id);
 
-    await saveDB();
-
-    await ctx.reply("✅ مدیای شما دریافت شد و منتظر تأیید مدیر است.");
-
-    const options = {};
-    if (media.type !== "video_note") {
-      options.caption = "📩 مدیای جدید برای بررسی\nشناسه: " + id;
+  // مسیر اختصاصی اعضای VIP
+  if (vip) {
+    if (!db.mediaSettings.channelId) {
+      return ctx.reply("❌ کانال مرکزی مدیا هنوز تنظیم نشده است.");
     }
 
-    const method = "send" + media.type.charAt(0).toUpperCase() + media.type.slice(1);
+    try {
+      const method =
+        "send" + media.type.charAt(0).toUpperCase() + media.type.slice(1);
 
-    await bot.api[method](OWNER_ID, media.file_id, options);
+      const sent = await bot.api[method](
+        db.mediaSettings.channelId,
+        media.file_id,
+        media.type === "video_note"
+          ? { protect_content: true }
+          : {
+              caption: media.caption || "",
+              protect_content: true
+            }
+      );
 
-    await bot.api.sendMessage(
-      OWNER_ID,
-      "مدیا را تأیید یا رد کن.",
-      {
-        reply_markup: {
-          inline_keyboard: [[
-            { text: "✅ تأیید و انتشار", callback_data: "media_yes_" + id },
-            { text: "❌ رد", callback_data: "media_no_" + id }
-          ]]
+      // ذخیره اطلاعات مدیا
+      db.media[id] = {
+        ...media,
+        caption: ctx.message.caption || "",
+        channelMessageId: sent.message_id
+      };
+
+      await saveDB();
+
+      // ساخت لینک اختصاصی
+      const me = await bot.api.getMe();
+      const link = `https://t.me/${me.username}?start=media_${id}`;
+
+      await ctx.reply(
+        "✅ مدیای شما در کانال مرکزی ذخیره شد.\n\n" +
+        "🔗 لینک اختصاصی شما:\n" + link,
+        {
+          link_preview_options: {
+            is_disabled: true
+          }
         }
-      }
-    );
+      );
+
+    } catch (err) {
+      console.error("VIP MEDIA ERROR:", err);
+      await ctx.reply("❌ هنگام ذخیره مدیا مشکلی پیش آمد.");
+    }
 
     return;
-  });
+  }
+
+  // مسیر کاربران عادی؛ نیازمند تأیید مدیر
+  db.pendingMedia[id] = {
+    ...media,
+    caption: ctx.message.caption || ""
+  };
+
+  await saveDB();
+
+  await ctx.reply("✅ مدیای شما دریافت شد و منتظر تأیید مدیر است.");
+
+  const options = {};
+  if (media.type !== "video_note") {
+    options.caption = "📩 مدیای جدید برای بررسی\nشناسه: " + id;
+  }
+
+  const method =
+    "send" + media.type.charAt(0).toUpperCase() + media.type.slice(1);
+
+  await bot.api[method](OWNER_ID, media.file_id, options);
+
+  await bot.api.sendMessage(
+    OWNER_ID,
+    "مدیا را تأیید یا رد کن.",
+    {
+      reply_markup: {
+        inline_keyboard: [[
+          { text: "✅ تأیید و انتشار", callback_data: "media_yes_" + id },
+          { text: "❌ رد", callback_data: "media_no_" + id }
+        ]]
+      }
+    }
+  );
+
+  return;
+});
 
  // تأیید و انتشار مدیا
 bot.callbackQuery(/^media_yes_(.+)$/, async (ctx) => {
