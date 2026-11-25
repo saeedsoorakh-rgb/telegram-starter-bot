@@ -820,16 +820,62 @@ bot.hears("اصل", async (ctx) => {
 
   if (!profile) return ctx.reply("پرونده‌ای ثبت نشده.");
 
-  const tags = db.tags?.[key] || [];
+  const keyboard = {
+    inline_keyboard: [
+      [
+        { text: "👤 Personal Profile", callback_data: `profile_p_${key}` },
+        { text: "🏷 Tags", callback_data: `profile_t_${key}` }
+      ]
+    ]
+  };
 
-  let result = "📋 پرونده عضو:\n\n" + profile.text;
+  await ctx.reply("📋 برای مشاهده اطلاعات، یکی از گزینه‌ها را انتخاب کن:", {
+    reply_markup: keyboard
+  });
+});
 
-  if (tags.length > 0) {
-    result += "\n\n🏷 برچسب‌های تأییدشده:\n";
-    result += tags.map(tag => "⭐ " + tag).join("\n");
+// PROFILE BUTTONS
+bot.callbackQuery(/^profile_(p|t)_(-?\d+_\d+)$/, async (ctx) => {
+  const type = ctx.match[1];
+  const key = ctx.match[2];
+
+  const profile = db.profiles[key];
+
+  if (!profile) {
+    return ctx.answerCallbackQuery({
+      text: "پرونده پیدا نشد."
+    });
   }
 
-  await ctx.reply(result);
+  const tags = db.tags?.[key] || [];
+
+  let text = "📋 اطلاعات پرونده";
+
+  if (type === "p") {
+    text = "👤 Personal Profile\n\n" + profile.text;
+  }
+
+  if (type === "t") {
+    text = "🏷 Tags\n\n" +
+      (tags.length
+        ? tags.map(tag => "⭐ " + tag).join("\n")
+        : "هنوز برچسبی ثبت نشده.");
+  }
+
+  const keyboard = {
+    inline_keyboard: [
+      [
+        { text: "👤 Personal Profile", callback_data: `profile_p_${key}` },
+        { text: "🏷 Tags", callback_data: `profile_t_${key}` }
+      ]
+    ]
+  };
+
+  await ctx.editMessageText(text, {
+    reply_markup: keyboard
+  });
+
+  await ctx.answerCallbackQuery();
 });
 // ADD TAG
 bot.hears(/^برچسب\s+(.+)$/s, async (ctx) => {
