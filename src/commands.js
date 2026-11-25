@@ -417,7 +417,7 @@ bot.command("start", async (ctx) => {
     );
   });
 
-  // SET VIP
+// SET VIP
 bot.hears(/^ویژه\s+([0-9۰-۹]+)$/, async (ctx) => {
   if (!isOwner(ctx)) return;
 
@@ -426,13 +426,14 @@ bot.hears(/^ویژه\s+([0-9۰-۹]+)$/, async (ctx) => {
     "۰۱۲۳۴۵۶۷۸۹".indexOf(d)
   ));
 
-  if (!user || days < 1) {
+  if (!user || !Number.isInteger(days) || days < 1) {
     return ctx.reply("روی پیام شخص ریپلای کن و بنویس: ویژه ۷");
   }
 
   const key = `${ctx.chat.id}_${user.id}`;
 
   db.vip[key] = Date.now() + days * 86400000;
+
   await saveDB();
   await applyPolicy(ctx, user.id);
 
@@ -448,19 +449,21 @@ bot.hears(/^تمدید\s+([0-9۰-۹]+)$/, async (ctx) => {
     "۰۱۲۳۴۵۶۷۸۹".indexOf(d)
   ));
 
-  if (!user || days < 1) {
+  if (!user || !Number.isInteger(days) || days < 1) {
     return ctx.reply("روی پیام شخص ریپلای کن و بنویس: تمدید ۳");
   }
 
   const key = `${ctx.chat.id}_${user.id}`;
-  const current = Math.max(db.vip[key] || 0, Date.now());
+  const current = db.vip[key];
 
-  if (!db.vip[key]) {
-    return ctx.reply("این شخص VIP نیست.");
+  if (!current || current <= Date.now()) {
+    return ctx.reply("این شخص VIP فعال ندارد.");
   }
 
   db.vip[key] = current + days * 86400000;
+
   await saveDB();
+  await applyPolicy(ctx, user.id);
 
   await ctx.reply(`✅ ${days} روز به اعتبار VIP اضافه شد.`);
 });
