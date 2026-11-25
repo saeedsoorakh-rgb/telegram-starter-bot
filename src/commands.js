@@ -125,12 +125,12 @@ async function applyPolicy(ctx, userId) {
         ctx.chat.id,
         userId,
         mutePermissions,
-        {
-          use_independent_chat_permissions: true,
-          ...(until === "permanent"
-            ? {}
-            : { until_date: Math.floor(until / 1000) })
-        }
+        until === "permanent"
+          ? { use_independent_chat_permissions: true }
+          : {
+              until_date: Math.floor(until / 1000),
+              use_independent_chat_permissions: true
+            }
       );
       return;
     }
