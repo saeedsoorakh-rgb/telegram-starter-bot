@@ -646,8 +646,9 @@ bot.hears("رفع سکوت", async (ctx) => {
   }
 });
 
-// PIN REPLIED MESSAGE
-bot.hears("پین", async (ctx) => {
+
+// ASL FORM
+bot.hears("فرم اصل", async (ctx) => {
   if (ctx.chat.type === "private") return;
 
   const userId = ctx.from.id;
@@ -665,25 +666,60 @@ bot.hears("پین", async (ctx) => {
     const vip = isVIP(ctx.chat.id, userId);
 
     if (!isAdmin && !vip) {
-      return ctx.reply("⛔ فقط مدیران و اعضای VIP اجازه پین دارند.");
+      return ctx.reply("فقط مدیران و اعضای VIP اجازه دارند.");
     }
 
-    const replied = ctx.message.reply_to_message;
+    const form = `به گروه خوش اومدی
 
-    if (!replied) {
-      return ctx.reply("⚠️ باید روی پیام موردنظر ریپلای کنی.");
-    }
+لطفا اصلت طبق موارد زیر رو ادمین ها رپلای کن تا اصلت ثبت کنند
 
-    await ctx.api.pinChatMessage(
-      ctx.chat.id,
-      replied.message_id
-    );
+اسم:
 
-    await ctx.reply("📌 پیام با موفقیت پین شد.");
+سن:
+
+شهر:
+
+رول: هرکدام که هستید (کاکولد، استگ، بول، نفرسوم، وانیلا)
+
+گرایش: (استریت، بایسکشوال)
+
+ثبت رول و گرایش الزامیه.
+
+برای ثبت اصل خانم‌ها، ارسال وویس به ادمین الزامی است.`;
+
+    await ctx.reply(form);
 
   } catch (err) {
-    console.error("PIN ERROR:", err);
-    await ctx.reply("❌ امکان پین کردن این پیام وجود ندارد.");
+    console.error("ASL FORM ERROR:", err);
+    await ctx.reply("خطا در نمایش فرم.");
+  }
+});
+
+
+// COPY FORM
+bot.hears("کپی", async (ctx) => {
+  if (ctx.chat.type === "private") return;
+
+  const replied = ctx.message.reply_to_message;
+
+  if (!replied || !replied.text) {
+    return ctx.reply("روی پیام فرم ریپلای کن.");
+  }
+
+  try {
+    await ctx.api.sendMessage(
+      ctx.from.id,
+      replied.text
+    );
+
+    await ctx.reply("فرم به پی وی ارسال شد.");
+
+  } catch (err) {
+    console.error("COPY FORM ERROR:", err);
+
+    await ctx.reply(
+      "ابتدا یک پیام در پی وی ربات بفرست، سپس دوباره دستور کپی را بزن."
+    );
   }
 });
  // SET PROFILE
@@ -1180,5 +1216,90 @@ bot.callbackQuery(/^show_media_(.+)$/, async (ctx) => {
   }
 });
 
-  bot.command("ping", (ctx) => ctx.reply("ربات فعاله ✅"));
+  bot.command("ping", (ctx) => ctx.reply("ربات فعاله"));
+
+
+  // BAN USER
+  bot.hears("بن", async (ctx) => {
+    if (ctx.chat.type === "private") return;
+
+    try {
+      const member = await ctx.api.getChatMember(
+        ctx.chat.id,
+        ctx.from.id
+      );
+
+      const isAdmin =
+        member.status === "creator" ||
+        member.status === "administrator";
+
+      if (!isAdmin) {
+        return ctx.reply("فقط مدیران گروه اجازه بن دارند.");
+      }
+
+      const replied = ctx.message.reply_to_message;
+
+      if (!replied || !replied.from) {
+        return ctx.reply("روی پیام شخص موردنظر ریپلای کن.");
+      }
+
+      const userId = replied.from.id;
+
+      if (userId === ctx.from.id) {
+        return ctx.reply("نمی‌توانی خودت را بن کنی.");
+      }
+
+      await ctx.api.banChatMember(ctx.chat.id, userId);
+
+      await ctx.reply(
+        `کاربر با شناسه ${userId} از گروه بن شد.`
+      );
+
+    } catch (err) {
+      console.error("BAN ERROR:", err);
+      await ctx.reply("خطا در بن کردن کاربر.");
+    }
+  });
+
+
+  // UNBAN USER
+  bot.hears(/^رفع بن\s+([0-9۰-۹]+)$/, async (ctx) => {
+    if (ctx.chat.type === "private") return;
+
+    try {
+      const member = await ctx.api.getChatMember(
+        ctx.chat.id,
+        ctx.from.id
+      );
+
+      const isAdmin =
+        member.status === "creator" ||
+        member.status === "administrator";
+
+      if (!isAdmin) {
+        return ctx.reply("فقط مدیران گروه اجازه رفع بن دارند.");
+      }
+
+      const userId = Number(
+        ctx.match[1].replace(/[۰-۹]/g, d =>
+          "۰۱۲۳۴۵۶۷۸۹".indexOf(d)
+        )
+      );
+
+      if (!Number.isSafeInteger(userId) || userId <= 0) {
+        return ctx.reply("شناسه عددی معتبر نیست.");
+      }
+
+      await ctx.api.unbanChatMember(ctx.chat.id, userId);
+
+      await ctx.reply(
+        `بن کاربر با شناسه ${userId} برداشته شد. اکنون می‌تواند دوباره وارد گروه شود.`
+      );
+
+    } catch (err) {
+      console.error("UNBAN ERROR:", err);
+      await ctx.reply("خطا در رفع بن کاربر.");
+    }
+  });
+
 }
