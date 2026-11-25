@@ -731,30 +731,34 @@ bot.hears("کپی", async (ctx) => {
     );
   }
 });
- // SET PROFILE
-  bot.hears("ثبت اصل", async (ctx) => {
-    if (ctx.chat.type === "private") return;
+// SET PROFILE
+bot.hears("ثبت اصل", async (ctx) => {
+  if (ctx.chat.type === "private") return;
 
-    const user = target(ctx);
-    const key = targetKey(ctx);
+  const user = target(ctx);
+  const key = targetKey(ctx);
 
-    if (!user || !ctx.from || (!isOwner(ctx) && !isVIP(ctx.chat.id, ctx.from.id))) {
-      return ctx.reply("فقط اعضای VIP می‌توانند پرونده ثبت کنند. باید روی پیام مشخصات شخص ریپلای کنی.");
-    }
+  if (!user || !ctx.from || (!isOwner(ctx) && !isVIP(ctx.chat.id, ctx.from.id))) {
+    return ctx.reply("فقط اعضای VIP می‌توانند پرونده ثبت کنند. باید روی پیام مشخصات شخص ریپلای کنی.");
+  }
 
-    const content = ctx.message.reply_to_message.text ||
-      ctx.message.reply_to_message.caption;
+  if (db.profiles[key]) {
+    return ctx.reply("⚠️ این شخص قبلاً پرونده ثبت‌شده دارد. پرونده قبلی حفظ شد.");
+  }
 
-    if (!content) return ctx.reply("پیام مشخصات باید متن داشته باشد.");
+  const content = ctx.message.reply_to_message.text ||
+    ctx.message.reply_to_message.caption;
 
-    db.profiles[key] = {
-      text: content,
-      editor: ctx.from.id
-    };
+  if (!content) return ctx.reply("پیام مشخصات باید متن داشته باشد.");
 
-    await saveDB();
-    await ctx.reply("✅ پرونده ثبت شد.");
-  });
+  db.profiles[key] = {
+    text: content,
+    editor: ctx.from.id
+  };
+
+  await saveDB();
+  await ctx.reply("✅ پرونده ثبت شد.");
+});
 
   // EDIT PROFILE
   bot.hears("ویرایش اصل", async (ctx) => {
