@@ -527,20 +527,41 @@ bot.hears("فهرست ویژه", async (ctx) => {
 
   const prefix = `${ctx.chat.id}_`;
 
-  const list = Object.entries(db.vip)
+  const members = Object.entries(db.vip)
     .filter(([key, expiry]) =>
       key.startsWith(prefix) && expiry > Date.now()
-    )
-    .map(([key, expiry]) => {
-      const id = key.split("_")[1];
-      const name = db.vipNames[key] || "بدون لقب";
-      const days = Math.ceil((expiry - Date.now()) / 86400000);
+    );
 
-      return `⭐ ${name}\nشناسه: ${id}\nاعتبار: ${days} روز`;
-    });
+  const list = await Promise.all(
+    members.map(async ([key, expiry]) => {
+      const id = key.split("_")[1];
+
+      let name = db.vipNames[key];
+
+      if (!name) {
+        try {
+          const member = await ctx.api.getChatMember(
+            ctx.chat.id,
+            Number(id)
+          );
+          name = member.user.first_name;
+        } catch {
+          name = "عضو گروه";
+        }
+      }
+
+      const days = Math.ceil(
+        (expiry - Date.now()) / 86400000
+      );
+
+      return `⭐ ${name}\nاعتبار: ${days} روز`;
+    })
+  );
 
   await ctx.reply(
-    list.length ? list.join("\n\n") : "فهرست ویژه خالی است."
+    list.length
+      ? list.join("\n\n")
+      : "فهرست ویژه خالی است."
   );
 });
 
@@ -559,20 +580,26 @@ bot.hears("فهرست ویژه", async (ctx) => {
   });
 
   // MUTE 24 HOURS
-  bot.hears("سکوت ۲۴", async (ctx) => {
-    if (!isOwner(ctx)) return;
+bot.hears(/^سکوت\s+(۲۴|24)$/, async (ctx) => {
+  if (!isOwner(ctx)) return;
 
-    const user = target(ctx);
-    if (!user) return ctx.reply("روی پیام شخص ریپلای کن.");
+  const user = target(ctx);
 
-    db.muted[`${ctx.chat.id}_${user.id}`] =
-      Date.now() + 86400000;
+  if (!user) {
+    return ctx.reply("⚠️ روی پیام شخص موردنظر ریپلای کن.");
+  }
 
-    await saveDB();
-    await applyPolicy(ctx, user.id);
+  const key = `${ctx.chat.id}_${user.id}`;
 
-    await ctx.reply("سکوت ۲۴ ساعته فعال شد.");
-  });
+  db.muted[key] = Date.now() + 24 * 60 * 60 * 1000;
+
+  await saveDB();
+  await applyPolicy(ctx, user.id);
+
+  await ctx.reply(
+    `🔇 سکوت ۲۴ ساعته برای ${user.first_name} فعال شد.`
+  );
+});
 // TEST UNMUTE
 bot.hears("تست آزاد", async (ctx) => {
   await ctx.reply("✅ دستور دریافت شد");
