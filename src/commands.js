@@ -125,9 +125,12 @@ async function applyPolicy(ctx, userId) {
         ctx.chat.id,
         userId,
         mutePermissions,
-        until === "permanent"
-          ? {}
-          : { until_date: Math.floor(until / 1000) }
+        {
+          use_independent_chat_permissions: true,
+          ...(until === "permanent"
+            ? {}
+            : { until_date: Math.floor(until / 1000) })
+        }
       );
       return;
     }
@@ -151,13 +154,19 @@ async function applyPolicy(ctx, userId) {
         can_send_polls: true,
         can_send_other_messages: true,
         can_add_web_page_previews: true
+      },
+      {
+        use_independent_chat_permissions: true
       }
     );
   } else {
     await ctx.api.restrictChatMember(
       ctx.chat.id,
       userId,
-      normalPermissions
+      normalPermissions,
+      {
+        use_independent_chat_permissions: true
+      }
     );
   }
 }
