@@ -68,9 +68,6 @@ async function loadDB() {
   }
 }
 
-    await saveDB();
-  }
-}
 
 async function saveDB() {
   await fs.writeFile(DB_FILE, JSON.stringify(db, null, 2));
