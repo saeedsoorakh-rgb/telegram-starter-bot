@@ -272,12 +272,13 @@ if (
 
         try {
           await bot.api.deleteMessage(chatId, messageId);
+
+          delete db.messageCleanup[key];
+          changed = true;
+
         } catch (err) {
           console.log("DELETE MESSAGE:", err.message);
         }
-
-        delete db.messageCleanup[key];
-        changed = true;
       }
 
       if (changed) await saveDB();
