@@ -12,8 +12,9 @@ let db = {
   setup: {},
   tags: {},
   pendingTags: {},
-    messageCleanup: {},
-  memberChannels: {}
+  messageCleanup: {},
+  memberChannels: {},
+  warnings: {}
 };
 
 async function loadDB() {
@@ -21,14 +22,15 @@ async function loadDB() {
     db = JSON.parse(await fs.readFile(DB_FILE, "utf8"));
 
     db.vip ||= {};
-db.vipNames ||= {};
-db.muted ||= {};
-db.profiles ||= {};
-db.setup ||= {};
-db.tags ||= {};
-db.pendingTags ||= {};
-db.messageCleanup ||= {};
-db.memberChannels ||= {};
+    db.vipNames ||= {};
+    db.muted ||= {};
+    db.profiles ||= {};
+    db.setup ||= {};
+    db.tags ||= {};
+    db.pendingTags ||= {};
+    db.messageCleanup ||= {};
+    db.memberChannels ||= {};
+    db.warnings ||= {};
 
     // KHAN MEDIA
     db.media ||= {};
@@ -42,23 +44,29 @@ db.memberChannels ||= {};
 
   } catch {
     db = {
+      vip: {},
       vipNames: {},
-muted: {},
-profiles: {},
-setup: {},
-tags: {},
-pendingTags: {},
-messageCleanup: {},
-memberChannels: {},
-media: {},
-pendingMedia: {},
-mediaSettings: {
-  channelId: null,
-  adChannel: null,
-  adLink: null,
-  adEnabled: false
-}
+      muted: {},
+      profiles: {},
+      setup: {},
+      tags: {},
+      pendingTags: {},
+      messageCleanup: {},
+      memberChannels: {},
+      warnings: {},
+      media: {},
+      pendingMedia: {},
+      mediaSettings: {
+        channelId: null,
+        adChannel: null,
+        adLink: null,
+        adEnabled: false
+      }
     };
+
+    await saveDB();
+  }
+}
 
     await saveDB();
   }
@@ -668,6 +676,136 @@ bot.hears("رفع سکوت", async (ctx) => {
     );
   }
 });
+
+
+// WARN USER
+bot.hears("اخطار", async (ctx) => {
+  if (ctx.chat.type === "private") return;
+
+  const user = target(ctx);
+
+  if (!user) {
+    return ctx.reply("⚠️ برای ثبت اخطار، روی پیام شخص موردنظر ریپلای کن.");
+  }
+
+  if (user.is_bot || user.id === ctx.from.id) {
+    return ctx.reply("⛔ امکان اخطار دادن به این کاربر وجود ندارد.");
+  }
+
+  let allowed = isOwner(ctx) || isVIP(ctx.chat.id, ctx.from.id);
+
+  if (!allowed) {
+    try {
+      const member = await ctx.api.getChatMember(ctx.chat.id, ctx.from.id);
+      allowed = ["creator", "administrator"].includes(member.status);
+    } catch (err) {
+      return ctx.reply("❌ امکان بررسی دسترسی شما وجود ندارد.");
+    }
+  }
+
+  if (!allowed) {
+    return ctx.reply("⛔ فقط مدیران گروه و اعضای VIP اجازه ثبت اخطار دارند.");
+  }
+
+  try {
+    const targetMember = await ctx.api.getChatMember(ctx.chat.id, user.id);
+
+    if (["creator", "administrator"].includes(targetMember.status)) {
+      return ctx.reply("⛔ امکان اخطار دادن به مدیران گروه وجود ندارد.");
+    }
+  } catch (err) {
+    return ctx.reply("❌ امکان بررسی وضعیت این کاربر وجود ندارد.");
+  }
+
+  const key = `${ctx.chat.id}_${user.id}`;
+
+  db.warnings[key] ||= 0;
+
+  if (db.warnings[key] >= 3) {
+    return ctx.reply("⚠️ این کاربر قبلاً ۳ اخطار دریافت کرده است.");
+  }
+
+  db.warnings[key]++;
+  const count = db.warnings[key];
+
+  await saveDB();
+
+  const escapeHTML = (text) =>
+    String(text).replace(/[&<>"']/g, (char) => ({
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#39;"
+    }[char]));
+
+  const name = escapeHTML(user.first_name || "کاربر");
+
+  await ctx.reply(
+    `⚠️ <b>اخطار رسمی</b>\n\n` +
+    `<a href="tg://user?id=${user.id}">${name}</a> گرامی، شما یک اخطار دریافت کردید.\n\n` +
+    `تعداد اخطارهای ثبت‌شده شما: <b>${count} از ۳</b>\n\n` +
+    `لطفاً قوانین گروه را رعایت کنید.\n\n` +
+    `🚫 اخطار سوم = بن شدن از گروه`,
+    { parse_mode: "HTML" }
+  );
+
+  if (count === 3) {
+    try {
+      await ctx.api.banChatMember(ctx.chat.id, user.id);
+
+      await ctx.reply(
+        `🚫 <a href="tg://user?id=${user.id}">${name}</a> به دلیل دریافت ۳ اخطار از گروه بن شد.`,
+        { parse_mode: "HTML" }
+      );
+
+    } catch (err) {
+      console.error("WARNING BAN ERROR:", err);
+
+      await ctx.reply(
+        "❌ اخطار سوم ثبت شد، اما خان نتوانست کاربر را بن کند.\n" +
+        "دسترسی ادمین ربات برای مسدود کردن اعضا را بررسی کن."
+      );
+    }
+  }
+});
+
+
+// DECREASE WARNING
+bot.hears("کاهش اخطار", async (ctx) => {
+  if (!isOwner(ctx)) {
+    return ctx.reply("⛔ فقط مدیر اصلی اجازه کاهش اخطار را دارد.");
+  }
+
+  if (ctx.chat.type === "private") return;
+
+  const user = target(ctx);
+
+  if (!user) {
+    return ctx.reply("⚠️ برای کاهش اخطار، روی پیام شخص موردنظر ریپلای کن.");
+  }
+
+  const key = `${ctx.chat.id}_${user.id}`;
+  const count = db.warnings[key] || 0;
+
+  if (count === 0) {
+    return ctx.reply("⚠️ این کاربر اخطاری برای کاهش ندارد.");
+  }
+
+  db.warnings[key]--;
+
+  if (db.warnings[key] === 0) {
+    delete db.warnings[key];
+  }
+
+  await saveDB();
+
+  await ctx.reply(
+    `✅ یک اخطار از کاربر ${user.first_name} کم شد.\n` +
+    `تعداد اخطارهای باقی‌مانده: ${db.warnings[key] || 0} از ۳`
+  );
+});
+
 
 // ASL FORM
 bot.hears("فرم اصل", async (ctx) => {
