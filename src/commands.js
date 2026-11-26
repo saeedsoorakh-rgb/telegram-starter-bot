@@ -287,43 +287,52 @@ if (
   }, 60 * 1000);
 // ثبت کانال اختصاصی هر ممبر
 bot.command("setchannel", async (ctx) => {
-  if (ctx.chat.type !== "private") {
-    return ctx.reply("⚠️ این دستور رو در پی‌وی خان اجرا کن.");
-  }
+if (ctx.chat.type !== "private") {
+return ctx.reply("⚠️ این دستور رو در پی‌وی خان اجرا کن.");
+}
 
-  const channelId = String(ctx.match || "").trim();
+const channelId = String(ctx.match || "").trim();
 
-  if (!channelId) {
-    return ctx.reply(
-      "📢 شناسه کانالت رو همراه دستور بفرست.\n\nمثال:\n/setchannel -1001234567890"
-    );
-  }
+if (!channelId) {
+return ctx.reply(
+"📢 شناسه کانالت رو همراه دستور بفرست.\n\nمثال:\n/setchannel -1001234567890"
+);
+}
 
-  try {
-    const botInfo = await ctx.api.getMe();
-    const botMember = await ctx.api.getChatMember(channelId, botInfo.id);
-    const userMember = await ctx.api.getChatMember(channelId, ctx.from.id);
+try {
+const botInfo = await ctx.api.getMe();
+const botMember = await ctx.api.getChatMember(channelId, botInfo.id);
+const userMember = await ctx.api.getChatMember(channelId, ctx.from.id);
 
-    if (!["administrator", "creator"].includes(botMember.status)) {
-      return ctx.reply("❌ اول خان رو در کانالت ادمین کن.");
-    }
+if (!["administrator", "creator"].includes(botMember.status)) {
+  return ctx.reply("❌ اول خان رو در کانالت ادمین کن.");
+}
 
-    if (!["administrator", "creator"].includes(userMember.status)) {
-      return ctx.reply("❌ باید خودت مدیر این کانال باشی.");
-    }
+if (!["administrator", "creator"].includes(userMember.status)) {
+  return ctx.reply("❌ باید خودت مدیر این کانال باشی.");
+}
 
-    if (botMember.status === "administrator" && !botMember.can_post_messages) {
-      return ctx.reply("❌ اجازه انتشار پست رو به خان بده.");
-    }
+if (botMember.status === "administrator" && !botMember.can_post_messages) {
+  return ctx.reply("❌ اجازه انتشار پست رو به خان بده.");
+}
 
-    db.memberChannels[ctx.from.id] = channelId;
-    await saveDB();
+db.memberChannels[ctx.from.id] = channelId;
+await saveDB();
 
-    await ctx.reply("✅ کانالت با موفقیت ثبت شد.");
-  } catch (err) {
-    console.error("SET CHANNEL ERROR:", err);
-    await ctx.reply("❌ نتونستم کانال رو بررسی کنم. شناسه و دسترسی خان رو بررسی کن.");
-  }
+await ctx.reply(
+  "✅ کانالت با موفقیت ثبت شد.\n\n" +
+  "🔒 برای محافظت از محتوای کانالت:\n\n" +
+  "۱. وارد تنظیمات کانال شو.\n" +
+  "۲. بخش نوع کانال یا Channel Type رو باز کن.\n" +
+  "۳. گزینه Restrict Saving Content رو فعال کن.\n\n" +
+  "⚠️ خان امکان فعال‌سازی یا بررسی خودکار این گزینه رو نداره.\n" +
+  "لطفاً خودت فعال بودنش رو بررسی کن."
+);
+
+} catch (err) {
+console.error("SET CHANNEL ERROR:", err);
+await ctx.reply("❌ نتونستم کانال رو بررسی کنم. شناسه و دسترسی خان رو بررسی کن.");
+}
 });
 // START
 bot.command("start", async (ctx) => {
