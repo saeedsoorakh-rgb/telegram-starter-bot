@@ -661,38 +661,35 @@ bot.hears("رفع سکوت", async (ctx) => {
 
 // ASL FORM
 bot.hears("فرم اصل", async (ctx) => {
-  if (ctx.chat.type === "private") return;
+if (ctx.chat.type === "private") return;
 
-  const userId = ctx.from.id;
+const userId = ctx.from.id;
 
-  try {
-    const member = await ctx.api.getChatMember(
-      ctx.chat.id,
-      userId
-    );
+try {
+const member = await ctx.api.getChatMember(
+ctx.chat.id,
+userId
+);
 
-    const isAdmin =
-      member.status === "creator" ||
-      member.status === "administrator";
+const isAdmin =
+  member.status === "creator" ||
+  member.status === "administrator";
 
-    const vip = isVIP(ctx.chat.id, userId);
+const vip = isVIP(ctx.chat.id, userId);
 
-    if (!isAdmin && !vip) {
-      return ctx.reply("فقط مدیران و اعضای VIP اجازه دارند.");
-    }
+if (!isAdmin && !vip) {
+  return ctx.reply("فقط مدیران و اعضای VIP اجازه دارند.");
+}
 
-    const form = `به گروه خوش اومدی 🌹
+const form = `به گروه خوش اومدی 🌹
 
 📜 راهنمای گروه و ثبت اصل
 
-<a href="https://t.me/c/6047972127/11">📋 قوانین گروه</a>
+<a href="https://t.me/hotiwifeee/11">📋 قوانین گروه</a>
 
+<a href="https://t.me/hotiwifeee/6">🌈 راهنمای گرایشات</a>
 
-<a href="https://t.me/c/6047972127/6">🌈 راهنمای گرایشات</a>
-
-
-<a href="https://t.me/c/6047972127/7">🌶️ راهنمای رول‌ها و اصطلاحات</a>
-
+<a href="https://t.me/hotiwifeee/7">🌶️ راهنمای رول‌ها و اصطلاحات</a>
 
 ━━━━━━━━━━━━━━━━━━
 
@@ -712,17 +709,17 @@ bot.hears("فرم اصل", async (ctx) => {
 
 برای ثبت اصل خانم‌ها، ارسال وویس به ادمین الزامی است.`;
 
-    await ctx.reply(form, {
-      parse_mode: "HTML",
-      link_preview_options: {
-        is_disabled: true
-      }
-    });
-
-  } catch (err) {
-    console.error("ASL FORM ERROR:", err);
-    await ctx.reply("خطا در نمایش فرم.");
+await ctx.reply(form, {
+  parse_mode: "HTML",
+  link_preview_options: {
+    is_disabled: true
   }
+});
+
+} catch (err) {
+console.error("ASL FORM ERROR:", err);
+await ctx.reply("خطا در نمایش فرم.");
+}
 });
 
 
